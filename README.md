@@ -21,6 +21,22 @@ DaemonSets, ReplicationControllers, Jobs, CronJobs). Both have trade-offs:
   However, non compliant pods created by another high level resource (be it native
   to Kubernetes, or a CRD), may not get rejected.
 
+This policy is able to load environment variables values defined using the [`valueFrom`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#envvar-v1-core) field.
+However, only values defined using the [`fieldRef`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#envvarsource-v1-core)
+and pointing to the resource fields from the following list are supported:
+
+- "metadata.name": load value from the `name` field from the resources's metadata
+- "metadata.namespace": load value from the `namespace` field from the resources's metadata
+- "metadata.labels['KEY']": load value from the `labels` field from the resources's metadata. The `KEY` is the label name
+- "metadata.annotations['KEY']": load value from the `annotations` field from the resources's metadata. The `KEY` is the annotation name
+- "spec.nodeName": load value from the `nodeName` field from the resource's pod specification
+- "spec.serviceAccountName": load value from the `serviceAccountName` field from the resource's pod specification
+
+It's important to mention that the value used in the validation is what is defined at the time
+of the resource creation. Not the actual value used when the resource is deployed. This happens
+because Kubernetes get values from the Pod. Not from the high level resource to populate
+the environment variables pointing to other fields.
+
 ## Settings
 
 Each rule defined in the policy settings is composed by a `reject` operator and a set

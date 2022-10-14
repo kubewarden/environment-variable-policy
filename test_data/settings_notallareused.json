@@ -1,0 +1,15 @@
+"rules": [
+	{
+		"reject": "notAllAreUsed",
+		"environmentVariables": [
+			{
+				"name": "foo",
+				"value": "bar"
+			},
+			{
+				"name": "foo2",
+				"value": "bar2"
+			}
+		]
+	}
+]

@@ -1,3 +1,5 @@
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/environment-variable-policy)](https://artifacthub.io/packages/search?repo=environment-variable-policy)
+
 # environment-variable-policy
 
 The environment-variable-policy can be used to inspect environment variables

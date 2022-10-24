@@ -10,11 +10,14 @@ use kubewarden::{protocol_version_guest, request::ValidationRequest, validate_se
 mod settings;
 use crate::settings::Rule;
 
-const ALL_ARE_USED_ERROR_MSG: &str = "Rule environment variables are not defined in the resource.";
-const NOT_ALL_ARE_USED_ERROR_MSG: &str = "Rule environment variables are defined in the resource.";
-const ANY_IN_ERROR_MSG: &str = "Resource misses at least one environment variable from the rule.";
+const ALL_ARE_USED_ERROR_MSG: &str =
+    "Resource cannot have all the environment variables from the rule defined.";
+const NOT_ALL_ARE_USED_ERROR_MSG: &str =
+    "Resource should have all the environment variables from the rule defined.";
+const ANY_IN_ERROR_MSG: &str =
+    "Resource cannot define any of the environment variables from the rule.";
 const ANY_NOT_IN_ERROR_MSG: &str =
-    "Resource should not contain any environment variable from the rule.";
+    "Resource should define at least one of the environment variables from the rule.";
 
 #[no_mangle]
 pub extern "C" fn wapc_init() {

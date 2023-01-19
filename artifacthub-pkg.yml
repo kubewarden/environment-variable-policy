@@ -1,14 +1,14 @@
 ---
-version: 0.1.1
+version: 0.1.2
 name: environment-variable-policy
 displayName: Environment Variable Policy
-createdAt: '2022-10-25T08:41:16-03:00'
+createdAt: '2023-01-19T14:46:21+02:00'
 description: A Kubewarden Policy that controls the usage of environment variables
 license: Apache-2.0
 homeURL: https://github.com/kubewarden/environment-variable-policy
 containersImages:
 - name: policy
-  image: "ghcr.io/kubewarden/policies/environment-variable-policy:v0.1.1"
+  image: "ghcr.io/kubewarden/policies/environment-variable-policy:v0.1.2"
 keywords:
 - deployment
 - replicaset
@@ -22,7 +22,7 @@ keywords:
 - environment-variables
 links:
 - name: policy
-  url: https://github.com/kubewarden/environment-variable-policy/releases/download/v0.1.1/policy.wasm
+  url: https://github.com/kubewarden/environment-variable-policy/releases/download/v0.1.2/policy.wasm
 - name: source
   url: https://github.com/kubewarden/environment-variable-policy
 provider:
@@ -33,3 +33,60 @@ annotations:
   kubewarden/resources: Deployment,Replicaset,Statefulset,Daemonset,Replicationcontroller,Job,Cronjob,Pod
   kubewarden/mutation: false
   kubewarden/contextAware: false
+  kubewarden/rules: |
+    rules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      resources: ["deployment","replicaset","statefulset","daemonset","replicationcontroller","job","cronjob","pod"]
+      operations: ["CREATE"]
+  kubewarden/questions-ui: |
+    questions:
+    - default: null
+      description: >-
+        Each rule defined in the policy settings is composed by a reject operator
+        and a set of the environment variables used with the operator against the
+        environment variables from the resources. The rules are evaluated in the
+        order that they are defined. The resource is denied in the first failed
+        evaluated rule.
+      group: Settings
+      label: Description
+      required: false
+      hide_input: true
+      type: string
+      variable: description
+    - default: []
+      group: Settings
+      label: Rules
+      hide_input: true
+      type: map[
+      variable: rules
+      subquestions:
+        - default: anyIn
+          group: Settings
+          label: Reject Operator
+          options:
+            - anyIn
+            - anyNotIn
+            - allAreUsed
+            - notAllAreUsed
+          required: false
+          type: enum
+          variable: rules.reject
+        - default: []
+          description: ''
+          group: Settings
+          label: Environment Variables
+          hide_input: true
+          type: map[
+          variable: rules.environmentVariables
+          subquestions:
+            - default: ''
+              group: Settings
+              label: Name
+              type: string
+              variable: rules.environmentVariables.name
+            - default: ''
+              group: Settings
+              label: Value
+              type: string
+              variable: rules.environmentVariables.value

@@ -1,5 +1,5 @@
 ---
-version: 0.1.3
+version: 0.1.4
 name: environment-variable-policy
 displayName: Environment Variable Policy
 createdAt: '2023-02-06T14:46:21+02:00'
@@ -8,7 +8,7 @@ license: Apache-2.0
 homeURL: https://github.com/kubewarden/environment-variable-policy
 containersImages:
 - name: policy
-  image: "ghcr.io/kubewarden/policies/environment-variable-policy:v0.1.3"
+  image: "ghcr.io/kubewarden/policies/environment-variable-policy:v0.1.4"
 keywords:
 - deployment
 - replicaset
@@ -22,7 +22,7 @@ keywords:
 - environment-variables
 links:
 - name: policy
-  url: https://github.com/kubewarden/environment-variable-policy/releases/download/v0.1.3/policy.wasm
+  url: https://github.com/kubewarden/environment-variable-policy/releases/download/v0.1.4/policy.wasm
 - name: source
   url: https://github.com/kubewarden/environment-variable-policy
 provider:
@@ -70,9 +70,9 @@ annotations:
       group: Settings
       label: Rules
       hide_input: true
-      type: map[
+      type: sequence[
       variable: rules
-      subquestions:
+      sequence_questions:
         - default: anyIn
           group: Settings
           label: Reject Operator
@@ -83,22 +83,22 @@ annotations:
             - notAllAreUsed
           required: false
           type: enum
-          variable: rules.reject
+          variable: reject
         - default: []
           description: ''
           group: Settings
           label: Environment Variables
           hide_input: true
-          type: map[
-          variable: rules.environmentVariables
-          subquestions:
+          type: sequence[
+          variable: environmentVariables
+          sequence_questions:
             - default: ''
               group: Settings
               label: Name
               type: string
-              variable: rules.environmentVariables.name
+              variable: name
             - default: ''
               group: Settings
               label: Value
               type: string
-              variable: rules.environmentVariables.value
+              variable: value

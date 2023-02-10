@@ -16,9 +16,9 @@ questions:
   group: Settings
   label: Rules
   hide_input: true
-  type: map[
+  type: sequence[
   variable: rules
-  subquestions:
+  sequence_questions:
     - default: anyIn
       group: Settings
       label: Reject Operator
@@ -29,22 +29,22 @@ questions:
         - notAllAreUsed
       required: false
       type: enum
-      variable: rules.reject
+      variable: reject
     - default: []
       description: ''
       group: Settings
       label: Environment Variables
       hide_input: true
-      type: map[
-      variable: rules.environmentVariables
-      subquestions:
+      type: sequence[
+      variable: environmentVariables
+      sequence_questions:
         - default: ''
           group: Settings
           label: Name
           type: string
-          variable: rules.environmentVariables.name
+          variable: name
         - default: ''
           group: Settings
           label: Value
           type: string
-          variable: rules.environmentVariables.value
+          variable: value

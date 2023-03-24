@@ -1,14 +1,19 @@
----
-version: 0.1.4
+# Kubewarden Artifacthub Package config
+#
+# Use this config to submit the policy to https://artifacthub.io.
+#
+# This config can be saved to its default location with:
+#   kwctl scaffold artifacthub > artifacthub-pkg.yml 
+version: 0.1.5
 name: environment-variable-policy
 displayName: Environment Variable Policy
-createdAt: '2023-02-13T15:57:33+00:00'
+createdAt: 2023-03-21T12:15:35.576788965Z
 description: A Kubewarden Policy that controls the usage of environment variables
 license: Apache-2.0
 homeURL: https://github.com/kubewarden/environment-variable-policy
 containersImages:
 - name: policy
-  image: "ghcr.io/kubewarden/policies/environment-variable-policy:v0.1.4"
+  image: ghcr.io/kubewarden/policies/environment-variable-policy:v0.1.5
 keywords:
 - deployment
 - replicaset
@@ -22,36 +27,24 @@ keywords:
 - environment-variables
 links:
 - name: policy
-  url: https://github.com/kubewarden/environment-variable-policy/releases/download/v0.1.4/policy.wasm
+  url: https://github.com/kubewarden/environment-variable-policy/releases/download/v0.1.5/policy.wasm
 - name: source
   url: https://github.com/kubewarden/environment-variable-policy
+install: |
+  The policy can be obtained using [`kwctl`](https://github.com/kubewarden/kwctl):
+  ```console
+  kwctl pull ghcr.io/kubewarden/policies/environment-variable-policy:v0.1.5
+  ```
+maintainers:
+- name: Kubewarden developers
+  email: cncf-kubewarden-maintainers@lists.cncf.io
 provider:
   name: kubewarden
 recommendations:
 - url: https://artifacthub.io/packages/helm/kubewarden/kubewarden-controller
 annotations:
-  kubewarden/resources: Deployment,Replicaset,Statefulset,Daemonset,Replicationcontroller,Job,Cronjob,Pod
-  kubewarden/mutation: false
-  kubewarden/contextAware: false
-  kubewarden/rules: |
-    rules:
-    - apiGroups: [""]
-      apiVersions: ["v1"]
-      resources: ["pods"]
-      operations: ["CREATE"] # kubernetes doesn't allow to add/remove privileged containers to an already running pod
-    - apiGroups: [""]
-      apiVersions: ["v1"]
-      resources: ["replicationcontrollers"]
-      operations: ["CREATE", "UPDATE"]
-    - apiGroups: ["apps"]
-      apiVersions: ["v1"]
-      resources: ["deployments","replicasets","statefulsets","daemonsets"]
-      operations: ["CREATE", "UPDATE"]
-    - apiGroups: ["batch"]
-      apiVersions: ["v1"]
-      resources: ["jobs","cronjobs"]
-      operations: ["CREATE", "UPDATE"]
-  kubewarden/questions-ui: |
+  kubewarden/mutation: 'false'
+  kubewarden/questions-ui: |-
     questions:
     - default: null
       description: >-
@@ -102,3 +95,44 @@ annotations:
               label: Value
               type: string
               variable: value
+  kubewarden/resources: Deployment,Replicaset,Statefulset,Daemonset,Replicationcontroller,Job,Cronjob,Pod
+  kubewarden/rules: |
+    - apiGroups:
+      - ''
+      apiVersions:
+      - v1
+      resources:
+      - pods
+      operations:
+      - CREATE
+    - apiGroups:
+      - ''
+      apiVersions:
+      - v1
+      resources:
+      - replicationcontrollers
+      operations:
+      - CREATE
+      - UPDATE
+    - apiGroups:
+      - apps
+      apiVersions:
+      - v1
+      resources:
+      - deployments
+      - replicasets
+      - statefulsets
+      - daemonsets
+      operations:
+      - CREATE
+      - UPDATE
+    - apiGroups:
+      - batch
+      apiVersions:
+      - v1
+      resources:
+      - jobs
+      - cronjobs
+      operations:
+      - CREATE
+      - UPDATE

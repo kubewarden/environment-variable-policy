@@ -4,16 +4,16 @@
 #
 # This config can be saved to its default location with:
 #   kwctl scaffold artifacthub > artifacthub-pkg.yml 
-version: 0.1.5
+version: 0.1.6
 name: environment-variable-policy
 displayName: Environment Variable Policy
-createdAt: 2023-03-21T12:15:35.576788965Z
+createdAt: 2023-07-07T19:16:31.932345772Z
 description: A Kubewarden Policy that controls the usage of environment variables
 license: Apache-2.0
 homeURL: https://github.com/kubewarden/environment-variable-policy
 containersImages:
 - name: policy
-  image: ghcr.io/kubewarden/policies/environment-variable-policy:v0.1.5
+  image: ghcr.io/kubewarden/policies/environment-variable-policy:v0.1.6
 keywords:
 - deployment
 - replicaset
@@ -27,13 +27,13 @@ keywords:
 - environment-variables
 links:
 - name: policy
-  url: https://github.com/kubewarden/environment-variable-policy/releases/download/v0.1.5/policy.wasm
+  url: https://github.com/kubewarden/environment-variable-policy/releases/download/v0.1.6/policy.wasm
 - name: source
   url: https://github.com/kubewarden/environment-variable-policy
 install: |
   The policy can be obtained using [`kwctl`](https://github.com/kubewarden/kwctl):
   ```console
-  kwctl pull ghcr.io/kubewarden/policies/environment-variable-policy:v0.1.5
+  kwctl pull ghcr.io/kubewarden/policies/environment-variable-policy:v0.1.6
   ```
 maintainers:
 - name: Kubewarden developers

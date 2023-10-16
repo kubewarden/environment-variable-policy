@@ -7,7 +7,7 @@
 version: 0.1.6
 name: environment-variable-policy
 displayName: Environment Variable Policy
-createdAt: 2023-07-07T19:16:31.932345772Z
+createdAt: 2023-10-16T08:43:19.959180861Z
 description: A Kubewarden Policy that controls the usage of environment variables
 license: Apache-2.0
 homeURL: https://github.com/kubewarden/environment-variable-policy
@@ -34,6 +34,10 @@ install: |
   The policy can be obtained using [`kwctl`](https://github.com/kubewarden/kwctl):
   ```console
   kwctl pull ghcr.io/kubewarden/policies/environment-variable-policy:v0.1.6
+  ```
+  Then, generate the policy manifest and tune it to your liking. For example:
+  ```console
+  kwctl scaffold manifest -t ClusterAdmissionPolicy registry://ghcr.io/kubewarden/policies/environment-variable-policy:v0.1.6
   ```
 maintainers:
 - name: Kubewarden developers

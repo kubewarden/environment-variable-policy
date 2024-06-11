@@ -13,11 +13,11 @@ use crate::settings::Rule;
 const ALL_ARE_USED_ERROR_MSG: &str =
     "Resource cannot have all the environment variables from the rule defined.";
 const NOT_ALL_ARE_USED_ERROR_MSG: &str =
-    "Resource should have all the environment variables from the rule defined.";
+    "Resource should have all the environment variables from the rule defined. Invalid environment variables found:";
 const ANY_IN_ERROR_MSG: &str =
-    "Resource cannot define any of the environment variables from the rule.";
+    "Resource cannot define any of the environment variables from the rule. Invalid environment variables found:";
 const ANY_NOT_IN_ERROR_MSG: &str =
-    "Resource should define at least one of the environment variables from the rule.";
+    "Resource should define at least one of the environment variables from the rule. Invalid environment variables found:";
 
 #[no_mangle]
 pub extern "C" fn wapc_init() {
@@ -26,54 +26,98 @@ pub extern "C" fn wapc_init() {
     register_function("protocol_version", protocol_version_guest);
 }
 
-fn validate_envvar_with_rule(rule: &Rule, env_vars: &Vec<apicore::EnvVar>) -> Result<()> {
-    let error_message: &str;
-    let mut resource_env_var: HashSet<settings::EnvVar> = HashSet::new();
-    for envvar in env_vars {
-        resource_env_var.insert(settings::EnvVar {
+fn validate_envvar_with_rule(rule: &Rule, env_vars: &[apicore::EnvVar]) -> Result<()> {
+    let error_message: String;
+    let resource_env_var: HashSet<settings::EnvVar> = env_vars
+        .iter()
+        .map(|envvar| settings::EnvVar {
             name: envvar.name.clone(),
             value: envvar.value.clone(),
-        });
-    }
+        })
+        .collect();
+    let resource_env_var_names: HashSet<settings::EnvVar> = env_vars
+        .iter()
+        .map(|envvar| settings::EnvVar {
+            name: envvar.name.clone(),
+            value: None,
+        })
+        .collect();
+    let validation_envvar_with_values: HashSet<settings::EnvVar> = rule
+        .environment_variables
+        .clone()
+        .into_iter()
+        .filter(|envvar| envvar.value.is_some())
+        .collect();
+    let validation_envvar_name_only: HashSet<settings::EnvVar> = rule
+        .environment_variables
+        .clone()
+        .into_iter()
+        .filter(|envvar| envvar.value.is_none())
+        .collect();
     match rule.reject {
         settings::Operator::AllAreUsed => {
-            if !rule.environment_variables.is_subset(&resource_env_var) {
+            if !validation_envvar_with_values.is_subset(&resource_env_var)
+                || !validation_envvar_name_only.is_subset(&resource_env_var_names)
+            {
                 return Ok(());
             } else {
-                error_message = ALL_ARE_USED_ERROR_MSG
+                error_message = ALL_ARE_USED_ERROR_MSG.to_owned()
             }
         }
         settings::Operator::NotAllAreUsed => {
-            let difference: HashSet<_> = rule
-                .environment_variables
+            let difference: HashSet<_> = validation_envvar_with_values
                 .difference(&resource_env_var)
                 .collect();
-            if difference.is_empty() {
+            let difference_names_only: HashSet<_> = validation_envvar_name_only
+                .difference(&resource_env_var_names)
+                .collect();
+            if difference.is_empty() && difference_names_only.is_empty() {
                 return Ok(());
             } else {
-                error_message = NOT_ALL_ARE_USED_ERROR_MSG
+                let invalid_envvars = difference
+                    .union(&difference_names_only)
+                    .map(|envvar| envvar.name.clone())
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                error_message = format!("{NOT_ALL_ARE_USED_ERROR_MSG} {invalid_envvars}");
             }
         }
         settings::Operator::AnyIn => {
-            let intersection: HashSet<_> = rule
-                .environment_variables
+            let name_value_intersection: HashSet<_> = validation_envvar_with_values
                 .intersection(&resource_env_var)
                 .collect();
-            if intersection.is_empty() {
+            let name_intersection: HashSet<_> = validation_envvar_name_only
+                .intersection(&resource_env_var_names)
+                .collect();
+            if name_value_intersection.is_empty() && name_intersection.is_empty() {
                 return Ok(());
             } else {
-                error_message = ANY_IN_ERROR_MSG
+                let invalid_envvars = name_value_intersection
+                    .union(&name_intersection)
+                    .map(|envvar| envvar.name.clone())
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                error_message = format!("{ANY_IN_ERROR_MSG} {invalid_envvars}");
             }
         }
         settings::Operator::AnyNotIn => {
-            let intersection: HashSet<_> = rule
-                .environment_variables
+            let intersection: HashSet<_> = validation_envvar_with_values
                 .difference(&resource_env_var)
                 .collect();
-            if intersection.is_empty() {
+            let intersection_name: HashSet<_> = validation_envvar_name_only
+                .difference(&resource_env_var_names)
+                .collect();
+            println!("{:?}", intersection);
+            println!("{:?}", intersection_name);
+            if intersection.is_empty() && intersection_name.is_empty() {
                 return Ok(());
             } else {
-                error_message = ANY_NOT_IN_ERROR_MSG
+                let invalid_envvars = intersection
+                    .union(&intersection_name)
+                    .map(|envvar| envvar.name.clone())
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                error_message = format!("{ANY_NOT_IN_ERROR_MSG} {invalid_envvars}");
             }
         }
     }
@@ -236,7 +280,10 @@ mod tests {
         ];
         let result = validate_envvar_with_rule(&rule, &envvar);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), NOT_ALL_ARE_USED_ERROR_MSG);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            format!("{NOT_ALL_ARE_USED_ERROR_MSG} name3")
+        );
         Ok(())
     }
 
@@ -333,7 +380,10 @@ mod tests {
         ];
         let result = validate_envvar_with_rule(&rule, &envvar);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), ANY_IN_ERROR_MSG);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            format!("{ANY_IN_ERROR_MSG} name2")
+        );
         Ok(())
     }
 
@@ -398,7 +448,10 @@ mod tests {
         ];
         let result = validate_envvar_with_rule(&rule, &envvar);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), ANY_NOT_IN_ERROR_MSG);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            format!("{ANY_NOT_IN_ERROR_MSG} name")
+        );
         Ok(())
     }
 
@@ -433,7 +486,10 @@ mod tests {
         };
         let result = validate_environment_variables(&podspec, &settings);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), ANY_IN_ERROR_MSG);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            format!("{ANY_IN_ERROR_MSG} name2")
+        );
         Ok(())
     }
 
@@ -468,7 +524,10 @@ mod tests {
         };
         let result = validate_environment_variables(&podspec, &settings);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), ANY_IN_ERROR_MSG);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            format!("{ANY_IN_ERROR_MSG} name")
+        );
         Ok(())
     }
 
@@ -503,7 +562,10 @@ mod tests {
         };
         let result = validate_environment_variables(&podspec, &settings);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), ANY_IN_ERROR_MSG);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            format!("{ANY_IN_ERROR_MSG} name")
+        );
         Ok(())
     }
 }

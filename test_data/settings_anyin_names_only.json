@@ -1,0 +1,10 @@
+"rules": [
+	{
+		"reject": "anyIn",
+		"environmentVariables": [
+			{
+				"name": "envvar"
+			}
+		]
+	}
+]

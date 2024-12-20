@@ -46,13 +46,19 @@
 	run kwctl run  --request-path test_data/deployment_notallareused.json --settings-path test_data/settings_notallareused.json  annotated-policy.wasm
 	[ "$status" -eq 0 ]
 	echo "$output"
-	[ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
+	[ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
  }
 
 @test "Test notAllAreUsed with names only" {
 	run kwctl run  --request-path test_data/deployment_notallareused.json --settings-path test_data/settings_notallareused_names_only.json  annotated-policy.wasm
 	[ "$status" -eq 0 ]
 	echo "$output"
-	[ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
+	[ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
  }
 
+@test "Test notAllAreUsed fail when all envvar are missing" {
+	run kwctl run  --request-path test_data/deployment_notallareused.json --settings-path test_data/settings_notallareused_fail.json  annotated-policy.wasm
+	[ "$status" -eq 0 ]
+	echo "$output"
+	[ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
+ }

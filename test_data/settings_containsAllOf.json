@@ -1,0 +1,7 @@
+{
+	"criteria": "containsAllOf",
+	"envvars": [
+		"a",
+		"b"
+	]
+}

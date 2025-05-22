@@ -126,7 +126,7 @@
               "terminationMessagePolicy": "File",
               "env": [
                 {
-                  "name": "envvar",
+                  "name": "c",
                   "value": "value"
                 }
               ]

@@ -1,0 +1,9 @@
+"rules": [
+	{
+		"reject": "doesNotContainAnyOf",
+		"environmentVariables": [
+			"a",
+			"b"
+		]
+	}
+]

@@ -10,14 +10,14 @@ use kubewarden::{protocol_version_guest, request::ValidationRequest, validate_se
 mod settings;
 use crate::settings::Rule;
 
-const ALL_ARE_USED_ERROR_MSG: &str =
-    "Resource cannot have all the environment variables from the rule defined.";
-const NOT_ALL_ARE_USED_ERROR_MSG: &str =
-    "Resource should have all the environment variables from the rule defined. Invalid environment variables found:";
 const ANY_IN_ERROR_MSG: &str =
-    "Resource cannot define any of the environment variables from the rule. Invalid environment variables found:";
+    "Resource must have at least one of the required environment variables specified by the validation rule. None of the expected environment variables were found:";
 const ANY_NOT_IN_ERROR_MSG: &str =
-    "Resource should define at least one of the environment variables from the rule. Invalid environment variables found:";
+    "Resource must not have any of the environment variables specified in the validation rule. The following invalid environment variables were found:";
+const ALL_ARE_USED_ERROR_MSG: &str =
+    "Resource is missing required environment variables as specified in the validation rules. The following environment variables are missing:";
+const NOT_ALL_ARE_USED_ERROR_MSG: &str =
+    "Resource has conflicting environment variables set according to the validation rules. The following environment variables should not be set together:";
 
 #[no_mangle]
 pub extern "C" fn wapc_init() {
@@ -28,100 +28,75 @@ pub extern "C" fn wapc_init() {
 
 fn validate_envvar_with_rule(rule: &Rule, env_vars: &[apicore::EnvVar]) -> Result<()> {
     let error_message: String;
-    let resource_env_var: HashSet<settings::EnvVar> = env_vars
-        .iter()
-        .map(|envvar| settings::EnvVar {
-            name: envvar.name.clone(),
-            value: envvar.value.clone(),
-        })
-        .collect();
-    let resource_env_var_names: HashSet<settings::EnvVar> = env_vars
-        .iter()
-        .map(|envvar| settings::EnvVar {
-            name: envvar.name.clone(),
-            value: None,
-        })
-        .collect();
-    let validation_envvar_with_values: HashSet<settings::EnvVar> = rule
-        .environment_variables
-        .clone()
-        .into_iter()
-        .filter(|envvar| envvar.value.is_some())
-        .collect();
-    let validation_envvar_name_only: HashSet<settings::EnvVar> = rule
-        .environment_variables
-        .clone()
-        .into_iter()
-        .filter(|envvar| envvar.value.is_none())
-        .collect();
+    let resource_env_var_names: HashSet<String> =
+        env_vars.iter().map(|envvar| envvar.name.clone()).collect();
+
     match rule.reject {
-        settings::Operator::AllAreUsed => {
-            if !validation_envvar_with_values.is_subset(&resource_env_var)
-                || !validation_envvar_name_only.is_subset(&resource_env_var_names)
+        settings::Operator::ContainsAllOf => {
+            if !rule
+                .environment_variables
+                .is_subset(&resource_env_var_names)
             {
-                return Ok(());
-            } else {
-                error_message = ALL_ARE_USED_ERROR_MSG.to_owned()
+                let missing_envvar = rule
+                    .environment_variables
+                    .difference(&resource_env_var_names)
+                    .cloned()
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                error_message = format!("{ALL_ARE_USED_ERROR_MSG} {missing_envvar}");
+                return Err(anyhow!(error_message));
             }
+            Ok(())
         }
-        settings::Operator::NotAllAreUsed => {
-            let difference: HashSet<_> = validation_envvar_with_values
-                .difference(&resource_env_var)
-                .collect();
-            let difference_names_only: HashSet<_> = validation_envvar_name_only
-                .difference(&resource_env_var_names)
-                .collect();
-            if difference.is_empty() && difference_names_only.is_empty() {
-                return Ok(());
-            } else {
-                let invalid_envvars = difference
-                    .union(&difference_names_only)
-                    .map(|envvar| envvar.name.clone())
+        settings::Operator::DoesNotContainAllOf => {
+            if rule
+                .environment_variables
+                .is_subset(&resource_env_var_names)
+            {
+                let invalid_envvars = rule
+                    .environment_variables
+                    .clone()
+                    .into_iter()
                     .collect::<Vec<String>>()
                     .join(", ");
                 error_message = format!("{NOT_ALL_ARE_USED_ERROR_MSG} {invalid_envvars}");
+                return Err(anyhow!(error_message));
             }
+            Ok(())
         }
-        settings::Operator::AnyIn => {
-            let name_value_intersection: HashSet<_> = validation_envvar_with_values
-                .intersection(&resource_env_var)
-                .collect();
-            let name_intersection: HashSet<_> = validation_envvar_name_only
-                .intersection(&resource_env_var_names)
-                .collect();
-            if name_value_intersection.is_empty() && name_intersection.is_empty() {
-                return Ok(());
-            } else {
-                let invalid_envvars = name_value_intersection
-                    .union(&name_intersection)
-                    .map(|envvar| envvar.name.clone())
+        settings::Operator::ContainsAnyOf => {
+            if rule
+                .environment_variables
+                .is_disjoint(&resource_env_var_names)
+            {
+                let missing_envvar = rule
+                    .environment_variables
+                    .clone()
+                    .into_iter()
                     .collect::<Vec<String>>()
                     .join(", ");
-                error_message = format!("{ANY_IN_ERROR_MSG} {invalid_envvars}");
+                error_message = format!("{ANY_IN_ERROR_MSG} {missing_envvar}");
+                return Err(anyhow!(error_message));
             }
+            Ok(())
         }
-        settings::Operator::AnyNotIn => {
-            let intersection: HashSet<_> = validation_envvar_with_values
-                .difference(&resource_env_var)
-                .collect();
-            let intersection_name: HashSet<_> = validation_envvar_name_only
-                .difference(&resource_env_var_names)
-                .collect();
-            println!("{:?}", intersection);
-            println!("{:?}", intersection_name);
-            if intersection.is_empty() && intersection_name.is_empty() {
-                return Ok(());
-            } else {
-                let invalid_envvars = intersection
-                    .union(&intersection_name)
-                    .map(|envvar| envvar.name.clone())
+        settings::Operator::DoesNotContainAnyOf => {
+            if !rule
+                .environment_variables
+                .is_disjoint(&resource_env_var_names)
+            {
+                let invalid_envvars = rule
+                    .environment_variables
+                    .intersection(&resource_env_var_names)
+                    .cloned()
                     .collect::<Vec<String>>()
                     .join(", ");
                 error_message = format!("{ANY_NOT_IN_ERROR_MSG} {invalid_envvars}");
+                return Err(anyhow!(error_message));
             }
+            Ok(())
         }
     }
-    Err(anyhow!(error_message))
 }
 
 fn validate_environment_variables(
@@ -184,388 +159,494 @@ fn validate(payload: &[u8]) -> CallResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
     use std::collections::HashSet;
 
-    #[test]
-    fn allareused_operator_ensure_all_envvar_are_defined_in_the_rule() -> Result<(), ()> {
-        let rule = Rule {
-            reject: settings::Operator::AllAreUsed,
+    #[rstest]
+    #[case::any_in(Rule {
+            reject: settings::Operator::ContainsAnyOf,
             environment_variables: HashSet::from([
-                settings::EnvVar {
-                    name: "name".to_string(),
-                    value: Some("value".to_string()),
-                },
-                settings::EnvVar {
-                    name: "name3".to_string(),
-                    value: Some("value3".to_string()),
-                },
+            "a".to_owned(),"b".to_owned()
             ]),
-        };
-        let envvar = vec![
+        }, vec![
             apicore::EnvVar {
-                name: "name".to_string(),
-                value: Some("value".to_string()),
+                name: "a".to_string(),
+                value: None,
                 ..Default::default()
             },
-            apicore::EnvVar {
-                name: "name2".to_string(),
-                value: Some("value2".to_string()),
-                ..Default::default()
-            },
-        ];
-        let result = validate_envvar_with_rule(&rule, &envvar);
-        assert!(result.is_ok());
-        Ok(())
-    }
-
-    #[test]
-    fn allareused_should_reject_if_envvar_is_not_in_the_resource() -> Result<(), ()> {
-        let rule = Rule {
-            reject: settings::Operator::AllAreUsed,
+        ], true)]
+    #[case::any_in(Rule {
+            reject: settings::Operator::ContainsAnyOf,
             environment_variables: HashSet::from([
-                settings::EnvVar {
-                    name: "name2".to_string(),
-                    value: Some("value2".to_string()),
-                },
-                settings::EnvVar {
-                    name: "name3".to_string(),
-                    value: Some("value3".to_string()),
-                },
+            "a".to_owned(),"b".to_owned()
             ]),
-        };
-        let envvar = vec![
+        }, vec![
             apicore::EnvVar {
-                name: "name2".to_string(),
-                value: Some("value2".to_string()),
+                name: "b".to_string(),
+                value: None,
                 ..Default::default()
             },
-            apicore::EnvVar {
-                name: "name3".to_string(),
-                value: Some("value3".to_string()),
-                ..Default::default()
-            },
-        ];
-        let result = validate_envvar_with_rule(&rule, &envvar);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), ALL_ARE_USED_ERROR_MSG);
-        Ok(())
-    }
-
-    #[test]
-    fn notallareused_should_fail_when_envvar_is_not_defined_in_the_resource() -> Result<(), ()> {
-        let rule = Rule {
-            reject: settings::Operator::NotAllAreUsed,
+        ], true)]
+    #[case::any_in(Rule {
+            reject: settings::Operator::ContainsAnyOf,
             environment_variables: HashSet::from([
-                settings::EnvVar {
-                    name: "name".to_string(),
-                    value: Some("value".to_string()),
-                },
-                settings::EnvVar {
-                    name: "name3".to_string(),
-                    value: Some("value3".to_string()),
-                },
+            "a".to_owned(),"b".to_owned()
             ]),
-        };
-        let envvar = vec![
+        }, vec![
             apicore::EnvVar {
-                name: "name".to_string(),
-                value: Some("value".to_string()),
+                name: "a".to_string(),
+                value: None,
                 ..Default::default()
             },
             apicore::EnvVar {
-                name: "name2".to_string(),
-                value: Some("value2".to_string()),
+                name: "b".to_string(),
+                value: None,
                 ..Default::default()
             },
-        ];
-        let result = validate_envvar_with_rule(&rule, &envvar);
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            format!("{NOT_ALL_ARE_USED_ERROR_MSG} name3")
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn notallareused_should_successed_when_envvar_is_defined_in_the_resource() -> Result<(), ()> {
-        let rule = Rule {
-            reject: settings::Operator::NotAllAreUsed,
+        ], true)]
+    #[case::any_in(Rule {
+            reject: settings::Operator::ContainsAnyOf,
             environment_variables: HashSet::from([
-                settings::EnvVar {
-                    name: "name".to_string(),
-                    value: Some("value".to_string()),
-                },
-                settings::EnvVar {
-                    name: "name3".to_string(),
-                    value: Some("value3".to_string()),
-                },
+            "a".to_owned(),"b".to_owned()
             ]),
-        };
-        let envvar = vec![
+        }, vec![
             apicore::EnvVar {
-                name: "name".to_string(),
-                value: Some("value".to_string()),
+                name: "a".to_string(),
+                value: None,
                 ..Default::default()
             },
             apicore::EnvVar {
-                name: "name3".to_string(),
-                value: Some("value3".to_string()),
+                name: "b".to_string(),
+                value: None,
                 ..Default::default()
             },
-        ];
-        let result = validate_envvar_with_rule(&rule, &envvar);
-        assert!(result.is_ok());
-        Ok(())
-    }
-
-    #[test]
-    fn anyin_should_succed_when_none_envvar_is_defined_in_the_resource() -> Result<(), ()> {
-        let rule = Rule {
-            reject: settings::Operator::AnyIn,
+            apicore::EnvVar {
+                name: "c".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], true)]
+    #[case::any_in(Rule {
+            reject: settings::Operator::ContainsAnyOf,
             environment_variables: HashSet::from([
-                settings::EnvVar {
-                    name: "name".to_string(),
-                    value: Some("value".to_string()),
-                },
-                settings::EnvVar {
-                    name: "name2".to_string(),
-                    value: Some("value2".to_string()),
-                },
+            "a".to_owned(),"b".to_owned()
             ]),
-        };
-        let envvar = vec![
+        }, vec![
             apicore::EnvVar {
-                name: "name3".to_string(),
-                value: Some("value3".to_string()),
+                name: "a".to_string(),
+                value: None,
                 ..Default::default()
             },
             apicore::EnvVar {
-                name: "name4".to_string(),
-                value: Some("value4".to_string()),
+                name: "b".to_string(),
+                value: None,
                 ..Default::default()
             },
-        ];
-        let result = validate_envvar_with_rule(&rule, &envvar);
-        assert!(result.is_ok());
-        Ok(())
-    }
-
-    #[test]
-    fn anyin_should_reject_if_some_envvar_is_defined_in_the_resource() -> Result<(), ()> {
-        let rule = Rule {
-            reject: settings::Operator::AnyIn,
+            apicore::EnvVar {
+                name: "c".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], true)]
+    #[case::any_in(Rule {
+            reject: settings::Operator::ContainsAnyOf,
             environment_variables: HashSet::from([
-                settings::EnvVar {
-                    name: "name".to_string(),
-                    value: Some("value".to_string()),
-                },
-                settings::EnvVar {
-                    name: "name2".to_string(),
-                    value: Some("value2".to_string()),
-                },
+            "a".to_owned(),"b".to_owned()
             ]),
-        };
-        let envvar = vec![
+        }, vec![
             apicore::EnvVar {
-                name: "name3".to_string(),
-                value: Some("value3".to_string()),
+                name: "c".to_string(),
+                value: None,
                 ..Default::default()
             },
-            apicore::EnvVar {
-                name: "name2".to_string(),
-                value: Some("value2".to_string()),
-                ..Default::default()
-            },
-        ];
-        let result = validate_envvar_with_rule(&rule, &envvar);
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            format!("{ANY_IN_ERROR_MSG} name2")
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn anynotin_should_succed_when_none_envvar_is_defined_in_the_resource() -> Result<(), ()> {
-        let rule = Rule {
-            reject: settings::Operator::AnyNotIn,
+        ], false)]
+    #[case::any_in(Rule {
+            reject: settings::Operator::ContainsAnyOf,
             environment_variables: HashSet::from([
-                settings::EnvVar {
-                    name: "name3".to_string(),
-                    value: Some("value3".to_string()),
-                },
-                settings::EnvVar {
-                    name: "name4".to_string(),
-                    value: Some("value4".to_string()),
-                },
+            "a".to_owned(),"b".to_owned()
             ]),
-        };
-        let envvar = vec![
+        }, vec![
             apicore::EnvVar {
-                name: "name3".to_string(),
-                value: Some("value3".to_string()),
+                name: "a".to_string(),
+                value: None,
                 ..Default::default()
             },
             apicore::EnvVar {
-                name: "name4".to_string(),
-                value: Some("value4".to_string()),
+                name: "c".to_string(),
+                value: None,
                 ..Default::default()
             },
-        ];
-        let result = validate_envvar_with_rule(&rule, &envvar);
-        assert!(result.is_ok());
-        Ok(())
-    }
-
-    #[test]
-    fn anynotin_should_reject_if_some_envvar_is_defined_in_the_resource() -> Result<(), ()> {
-        let rule = Rule {
-            reject: settings::Operator::AnyNotIn,
+        ], true)]
+    #[case::any_in(Rule {
+            reject: settings::Operator::ContainsAnyOf,
             environment_variables: HashSet::from([
-                settings::EnvVar {
-                    name: "name".to_string(),
-                    value: Some("value".to_string()),
-                },
-                settings::EnvVar {
-                    name: "name2".to_string(),
-                    value: Some("value2".to_string()),
-                },
+            "a".to_owned(),"b".to_owned()
             ]),
-        };
-        let envvar = vec![
+        }, vec![
             apicore::EnvVar {
-                name: "name2".to_string(),
-                value: Some("value2".to_string()),
+                name: "b".to_string(),
+                value: None,
                 ..Default::default()
             },
             apicore::EnvVar {
-                name: "name4".to_string(),
-                value: Some("value4".to_string()),
+                name: "c".to_string(),
+                value: None,
                 ..Default::default()
             },
-        ];
+        ], true)]
+    #[case::any_in(Rule {
+            reject: settings::Operator::ContainsAnyOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![ ], false)]
+    #[case::any_not_in(Rule {
+            reject: settings::Operator::DoesNotContainAnyOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "a".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], false)]
+    #[case::any_not_in(Rule {
+            reject: settings::Operator::DoesNotContainAnyOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "b".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], false)]
+    #[case::any_not_in(Rule {
+            reject: settings::Operator::DoesNotContainAnyOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "a".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "b".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], false)]
+    #[case::any_not_in(Rule {
+            reject: settings::Operator::DoesNotContainAnyOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "a".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "b".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "c".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], false)]
+    #[case::any_not_in(Rule {
+            reject: settings::Operator::DoesNotContainAnyOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "c".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], true)]
+    #[case::any_not_in(Rule {
+            reject: settings::Operator::DoesNotContainAnyOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "a".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "c".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], false)]
+    #[case::any_not_in(Rule {
+            reject: settings::Operator::DoesNotContainAnyOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "b".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "c".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], false)]
+    #[case::any_not_in(Rule {
+            reject: settings::Operator::DoesNotContainAnyOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![ ], true)]
+    #[case::all_are_used(Rule {
+            reject: settings::Operator::ContainsAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "a".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], false)]
+    #[case::all_are_used(Rule {
+            reject: settings::Operator::ContainsAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "b".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], false)]
+    #[case::all_are_used(Rule {
+            reject: settings::Operator::ContainsAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "a".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "b".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], true)]
+    #[case::all_are_used(Rule {
+            reject: settings::Operator::ContainsAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "a".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "b".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "c".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], true)]
+    #[case::all_are_used(Rule {
+            reject: settings::Operator::ContainsAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "c".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], false)]
+    #[case::all_are_used(Rule {
+            reject: settings::Operator::ContainsAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "a".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "c".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], false)]
+    #[case::all_are_used(Rule {
+            reject: settings::Operator::ContainsAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "b".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "c".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], false)]
+    #[case::all_are_used(Rule {
+            reject: settings::Operator::ContainsAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![ ], false)]
+    #[case::not_all_are_used(Rule {
+            reject: settings::Operator::DoesNotContainAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "a".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], true)]
+    #[case::not_all_are_used(Rule {
+            reject: settings::Operator::DoesNotContainAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "b".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], true)]
+    #[case::not_all_are_used(Rule {
+            reject: settings::Operator::DoesNotContainAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "a".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "b".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], false)]
+    #[case::not_all_are_used(Rule {
+            reject: settings::Operator::DoesNotContainAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "a".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "b".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "c".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], false)]
+    #[case::not_all_are_used(Rule {
+            reject: settings::Operator::DoesNotContainAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "c".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], true)]
+    #[case::not_all_are_used(Rule {
+            reject: settings::Operator::DoesNotContainAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "a".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "c".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], true)]
+    #[case::not_all_are_used(Rule {
+            reject: settings::Operator::DoesNotContainAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![
+            apicore::EnvVar {
+                name: "b".to_string(),
+                value: None,
+                ..Default::default()
+            },
+            apicore::EnvVar {
+                name: "c".to_string(),
+                value: None,
+                ..Default::default()
+            },
+        ], true)]
+    #[case::not_all_are_used(Rule {
+            reject: settings::Operator::DoesNotContainAllOf,
+            environment_variables: HashSet::from([
+            "a".to_owned(),"b".to_owned()
+            ]),
+        }, vec![ ], true)]
+    fn tests(#[case] rule: Rule, #[case] envvar: Vec<apicore::EnvVar>, #[case] is_ok: bool) {
         let result = validate_envvar_with_rule(&rule, &envvar);
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            format!("{ANY_NOT_IN_ERROR_MSG} name")
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn podspec_container_envvar_should_be_validated_test() -> Result<(), ()> {
-        let podspec = apicore::PodSpec {
-            containers: vec![apicore::Container {
-                env: Some(vec![apicore::EnvVar {
-                    name: "name2".to_string(),
-                    value: Some("value2".to_string()),
-                    ..Default::default()
-                }]),
-                ..Default::default()
-            }],
-            ..Default::default()
-        };
-        let settings = settings::Settings {
-            rules: vec![Rule {
-                reject: settings::Operator::AnyIn,
-                environment_variables: HashSet::from([
-                    settings::EnvVar {
-                        name: "envvar".to_string(),
-                        value: None,
-                    },
-                    settings::EnvVar {
-                        name: "name2".to_string(),
-                        value: Some("value2".to_string()),
-                    },
-                ]),
-                ..Default::default()
-            }],
-        };
-        let result = validate_environment_variables(&podspec, &settings);
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            format!("{ANY_IN_ERROR_MSG} name2")
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn podspec_init_container_envvar_should_be_validated_test() -> Result<(), ()> {
-        let podspec = apicore::PodSpec {
-            init_containers: Some(vec![apicore::Container {
-                env: Some(vec![apicore::EnvVar {
-                    name: "name".to_string(),
-                    value: Some("value".to_string()),
-                    ..Default::default()
-                }]),
-                ..Default::default()
-            }]),
-            ..Default::default()
-        };
-        let settings = settings::Settings {
-            rules: vec![Rule {
-                reject: settings::Operator::AnyIn,
-                environment_variables: HashSet::from([
-                    settings::EnvVar {
-                        name: "envvar".to_string(),
-                        value: None,
-                    },
-                    settings::EnvVar {
-                        name: "name".to_string(),
-                        value: Some("value".to_string()),
-                    },
-                ]),
-                ..Default::default()
-            }],
-        };
-        let result = validate_environment_variables(&podspec, &settings);
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            format!("{ANY_IN_ERROR_MSG} name")
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn podspec_ephemeral_container_envvar_should_be_validated_test() -> Result<(), ()> {
-        let podspec = apicore::PodSpec {
-            ephemeral_containers: Some(vec![apicore::EphemeralContainer {
-                env: Some(vec![apicore::EnvVar {
-                    name: "name".to_string(),
-                    value: Some("value".to_string()),
-                    ..Default::default()
-                }]),
-                ..Default::default()
-            }]),
-            ..Default::default()
-        };
-        let settings = settings::Settings {
-            rules: vec![Rule {
-                reject: settings::Operator::AnyIn,
-                environment_variables: HashSet::from([
-                    settings::EnvVar {
-                        name: "envvar".to_string(),
-                        value: None,
-                    },
-                    settings::EnvVar {
-                        name: "name".to_string(),
-                        value: Some("value".to_string()),
-                    },
-                ]),
-                ..Default::default()
-            }],
-        };
-        let result = validate_environment_variables(&podspec, &settings);
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            format!("{ANY_IN_ERROR_MSG} name")
-        );
-        Ok(())
+        assert_eq!(result.is_ok(), is_ok);
     }
 }

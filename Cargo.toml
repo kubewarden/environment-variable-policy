@@ -1,8 +1,8 @@
 [package]
 name = "environment-variable-policy"
-version = "1.0.1"
+version = "2.0.0"
 authors = [
-  "José Guilherme Vanz <jvanz@jvanz.com>",
+  "José Guilherme Vanz <jguilhermevanz@suse.com>",
   "Kubewarden Developers <cncf-kubewarden-maintainers@lists.cncf.io>",
 ]
 edition = "2018"
@@ -24,3 +24,4 @@ serde_json = "1.0"
 
 [dev-dependencies]
 serde_yaml = "0.9"
+rstest = "0.25.0"

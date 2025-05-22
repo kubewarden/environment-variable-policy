@@ -4,110 +4,136 @@
 # environment-variable-policy
 
 The environment-variable-policy can be used to inspect environment variables
-defined in the resources deployed in the cluster. It's able to validate both
-variables names and values. The policy allows the users define multiple validation rules.
-And the resource must pass **all** the rules to be allowed in the cluster.
+defined in the resources deployed in the cluster.
 
-The policy can either target Pods, or workload resources (Deployments, ReplicaSets,
-DaemonSets, ReplicationControllers, Jobs, CronJobs). Both have trade-offs:
+The policy can either target Pods, or workload resources (Deployments,
+ReplicaSets, DaemonSets, ReplicationControllers, Jobs, CronJobs). Both have
+trade-offs:
 
 - Policy targets Pods: Different kind of resources (be them native or CRDs) can
   create Pods. By having the policy target Pods, we guarantee that all the Pods
   are going to be compliant, even those created from CRDs. However, this could
   lead to confusion among users, as high level Kubernetes resources would be
-  successfully created, but they would stay in a non reconciled state.
-  Example: a Deployment creating a non-compliant Pod would be created, but it
-  would never have all its replicas running.
+  successfully created, but they would stay in a non reconciled state. Example: a
+  Deployment creating a non-compliant Pod would be created, but it would never
+  have all its replicas running.
 
-- Policy targets workload resources (e.g: Deployment): the policy inspect higher
-  order resource (e.g. Deployment): users will get immediate feedback about rejections.
-  However, non compliant pods created by another high level resource (be it native
-  to Kubernetes, or a CRD), may not get rejected.
+- Policy targets workload resources (e.g: Deployment): the policy inspect
+  higher order resource (e.g. Deployment): users will get immediate feedback
+  about rejections. However, non compliant pods created by another high level
+  resource (be it native to Kubernetes, or a CRD), may not get rejected.
 
 ## Settings
 
-Each rule defined in the policy settings is composed by a `reject` operator and a set
-of the environment variable used with the operator against the environment variables
-from the resources. The rules are evaluated in the order that they are defined.
-The resource is denied in the first failed evaluated rule. The following yaml is a settings example:
+> [!WARNING]  
+> If you are upgrading from version v1.x.x, please note the breaking changes
+> introduced in v2.x.x:
+>
+> Environment variable values are no longer considered.
+>
+> The policy now focuses solely on the name of the environment variable, not
+> its value.
+>
+> New settings syntax
+>
+> The settings no longer use a list of rules for validation. Instead, the
+> policy validates a single type of condition. Refer to the "Current Settings
+> Fields" section below for details on the new settings.
+
+The policy settings has the `criteria` field which define the logic operatation
+performed with the `envvars` defined in the settings and the environment variables
+defined in the resource:
 
 ```yaml
 settings:
-  rules:
-    - reject: anyIn
-      environmentVariables:
-        - name: "envvar1"
-          value: "envvar1_value"
-        - name: "envvar2"
-          value: "envvar2_value"
-
+  criteria: "containsAnyOf"
+  envvars:
+    - MARIADB_USER
+    - MARIADB_PASSWORD
 ```
 
-The supported `reject` operator are:
+The `criteria` configuration can have the following values:
 
+- `containsAnyOf`: enforces that the resource has at least one of the
+  `environmentVariables`.
+- `doesNotContainAnyOf`: enforces that the resource does not have any environment
+  variable defined in `environmentVariables`. It's the opposite of `containsAnyOf`.
+- `containsAllOf`: enforces that all of the `environmentVariables` are defined in
+  the resource.
+- `doesNotContainAllOf`: enforces that the `environmentVariables` are not all set
+  together in the resource. It's the opposite of `containsAllOf`.
 
-- `anyIn` (default): checks if any of the `environmentVariables` are in the Pod/Workload resource
-- `anyNotIn`: checks if any of the `environmentVariables` are not in the Pod/Workload resource
-- `allAreUsed`: checks if all of the `environmentVariables` are in the Pod/Workload resource
-- `notAllAreUsed`: checks if all of the `environmentVariables` are not in the Pod/Workload resource
+The `envvars` field must contain at least one environment variable name for
+validation. Environment variable names should follow the C_IDENTIFIER standard.
 
-The environment variables are defined as objects:
-```yaml
-- name: "variable name"
-  value: "variable value"
-```
+> [!IMPORTANT]  
+> An empty list of environment variable names is not allowed.
 
-The name should follow the  [C_IDENTIFIER](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#envvar-v1-core)
-standard and the `value` field is optional. When it is not define the `""` value is used by default.
+If you require more complex environment variable validation, consider the use
+of [Kubewarden policy groups](https://docs.kubewarden.io/howtos/policy-groups).
+With policy groups, you can combine multiple validations using complex logical
+operators to function as a single policy.
 
-It is not allowed define a rule with an empty `environmentVariables` list.
+## Rules operators logic tables
 
-## Examples
+These are some tables to help you understand the logic of the operators:
 
-In the following example, the resources that have least one of the variables will be denied:
+### `containsAnyOf`
 
-```yaml
-settings:
-  rules:
-    - reject: anyIn
-      environmentVariables:
-        - name: "envvar1"
-        - name: "envvar2"
+Given these `environmentVariables` settings: `[a, b]`
 
-```
+| Resource environment variables | Evaluation result |
+| ------------------------------ | ----------------- |
+| a                              | Accepted          |
+| b                              | Accepted          |
+| a,b                            | Accepted          |
+| a,b,c                          | Accepted          |
+| c                              | Rejected          |
+| a, c                           | Accepted          |
+| b, c                           | Accepted          |
+| empty                          | Rejected          |
 
-In the following example, the resources cannot use both environment variables at once, only one or the other
+### `doesNotContainAnyOf`
 
-```yaml
-settings:
-  rules:
-    - reject: allAreUsed
-      environmentVariables:
-        - name: "envvar2"
-          value: ""
-```
+Given these `environmentVariables` settings: `[a, b]`
 
-In the following example, only resources that have the `envvar3` or `envvar2` defined will be allowed:
+| Resource environment variables | Evaluation result |
+| ------------------------------ | ----------------- |
+| a                              | Rejected          |
+| b                              | Rejected          |
+| a,b                            | Rejected          |
+| a,b,c                          | Rejected          |
+| c                              | Accepted          |
+| a, c                           | Rejected          |
+| b, c                           | Rejected          |
+| empty                          | Accepted          |
 
-```yaml
-settings:
-  rules:
-    - reject: anyNotIn
-      environmentVariables:
-        - name: "envvar2"
-          value: "envvar2_value"
-        - name: "envvar3"
-```
+### `containsAllOf`
 
-In the following example, the resources can use both variables at once, but not only one of them
+Given these `environmentVariables` settings: `[a, b]`
 
-```yaml
-settings:
-  rules:
-    - reject: notAllAreUsed
-      environmentVariables:
-        - name: "envvar3"
-          value: "envvar3_value"
-        - name: "envvar4"
-          value: "envvar4_value"
-```
+| Resource environment variables | Evaluation result |
+| ------------------------------ | ----------------- |
+| a                              | Rejected          |
+| b                              | Rejected          |
+| a,b                            | Accepted          |
+| a,b,c                          | Accepted          |
+| c                              | Rejected          |
+| a, c                           | Rejected          |
+| b, c                           | Rejected          |
+| empty                          | Rejected          |
+
+### `doesNotContainAllOf`
+
+Given these `environmentVariables` settings: `[a, b]`
+
+| Resource environment variables | Evaluation result |
+| ------------------------------ | ----------------- |
+| a                              | Accepted          |
+| b                              | Accepted          |
+| a,b                            | Rejected          |
+| a,b,c                          | Rejected          |
+| c                              | Accepted          |
+| a, c                           | Accepted          |
+| b, c                           | Accepted          |
+| empty                          | Accepted          |

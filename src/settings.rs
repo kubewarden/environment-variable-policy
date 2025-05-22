@@ -7,18 +7,17 @@ use std::collections::HashSet;
 #[allow(clippy::enum_variant_names)] // allow for all to end in `In`
 pub(crate) struct EnvVar {
     pub name: String,
-    pub value: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[allow(clippy::enum_variant_names)] // allow for all to end in `In`
 pub enum Operator {
-    AllAreUsed,
-    NotAllAreUsed,
+    ContainsAllOf,
+    DoesNotContainAllOf,
     #[default]
-    AnyIn,
-    AnyNotIn,
+    ContainsAnyOf,
+    DoesNotContainAnyOf,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -26,7 +25,7 @@ pub enum Operator {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Rule {
     pub reject: Operator,
-    pub environment_variables: HashSet<EnvVar>,
+    pub environment_variables: HashSet<String>,
 }
 
 // Describe the settings your policy expects when
@@ -60,7 +59,6 @@ impl kubewarden::settings::Validatable for Settings {
             .rules
             .iter()
             .flat_map(|rule| rule.environment_variables.clone())
-            .map(|envvar| envvar.name)
             .all(|envvar| environment_variable_name_regex.is_match(&envvar));
         if !all_envvar_valid {
             return Err("Invalid environment variable name.".to_string());
@@ -105,18 +103,9 @@ mod tests {
         let settings = Settings {
             rules: vec![Rule {
                 environment_variables: HashSet::from([
-                    EnvVar {
-                        name: "envvar".to_string(),
-                        value: None,
-                    },
-                    EnvVar {
-                        name: "env_var2".to_string(),
-                        value: None,
-                    },
-                    EnvVar {
-                        name: "_env_var3".to_string(),
-                        value: None,
-                    },
+                    "envvar".to_owned(),
+                    "env_var2".to_owned(),
+                    "_env_var3".to_owned(),
                 ]),
                 ..Default::default()
             }],
@@ -129,110 +118,14 @@ mod tests {
     }
 
     #[test]
-    fn settings_should_allow_envvar_name_and_value() -> Result<(), ()> {
-        let settings = Settings {
-            rules: vec![Rule {
-                environment_variables: HashSet::from([
-                    EnvVar {
-                        name: "envvar".to_string(),
-                        value: Some("value1".to_string()),
-                    },
-                    EnvVar {
-                        name: "env_var2".to_string(),
-                        value: Some("value_2".to_string()),
-                    },
-                    EnvVar {
-                        name: "_env_var3".to_string(),
-                        value: Some("value3!".to_string()),
-                    },
-                ]),
-                ..Default::default()
-            }],
-        };
-        assert!(
-            settings.validate().is_ok(),
-            "Environment variables should allow name and value"
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn settings_should_allow_envvar_name_and_value_mixed() -> Result<(), ()> {
-        let settings = Settings {
-            rules: vec![Rule {
-                environment_variables: HashSet::from([
-                    EnvVar {
-                        name: "envvar".to_string(),
-                        value: None,
-                    },
-                    EnvVar {
-                        name: "env_var2".to_string(),
-                        value: Some("value2".to_string()),
-                    },
-                    EnvVar {
-                        name: "_env_var3".to_string(),
-                        value: Some("value3".to_string()),
-                    },
-                ]),
-                ..Default::default()
-            }],
-        };
-        assert!(
-            settings.validate().is_ok(),
-            "Environment variables should allow mix only names and name with values"
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn settings_should_allow_envvar_with_empty_value() -> Result<(), ()> {
-        let settings = Settings {
-            rules: vec![Rule {
-                environment_variables: HashSet::from([
-                    EnvVar {
-                        name: "envvar".to_string(),
-                        value: None,
-                    },
-                    EnvVar {
-                        name: "env_var2".to_string(),
-                        value: Some("".to_string()),
-                    },
-                    EnvVar {
-                        name: "_env_var3".to_string(),
-                        value: Some("".to_string()),
-                    },
-                ]),
-                ..Default::default()
-            }],
-        };
-        assert!(
-            settings.validate().is_ok(),
-            "Environment variables should allow empty values"
-        );
-        Ok(())
-    }
-
-    #[test]
     fn settings_should_not_allow_envvar_beginning_with_numbers() -> Result<(), ()> {
         let settings = Settings {
             rules: vec![Rule {
                 environment_variables: HashSet::from([
-                    EnvVar {
-                        name: "1envvar".to_string(),
-                        value: None,
-                    },
-                    EnvVar {
-                        name: "2envvar2".to_string(),
-                        value: Some("".to_string()),
-                    },
-                    EnvVar {
-                        name: "3env_var3".to_string(),
-                        value: Some("value".to_string()),
-                    },
-                    EnvVar {
-                        name: "4_env_var4".to_string(),
-                        value: Some("value".to_string()),
-                    },
+                    "1envvar".to_owned(),
+                    "2envvar2".to_owned(),
+                    "3env_var3".to_owned(),
+                    "4_env_var4".to_owned(),
                 ]),
                 ..Default::default()
             }],
@@ -275,44 +168,17 @@ mod tests {
     fn settings_serialization_test() -> Result<(), ()> {
         let yaml = r#"
           rules:
-            - reject: "allAreUsed"
+            - reject: "containsAllOf"
               environmentVariables:
-                - name: "envar"
-                  value: "envvar value"
+                - "envar"
         "#;
         let settings: Settings = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(settings.rules.len(), 1);
-        assert_eq!(settings.rules[0].reject, Operator::AllAreUsed);
+        assert_eq!(settings.rules[0].reject, Operator::ContainsAllOf);
         assert_eq!(settings.rules[0].environment_variables.len(), 1);
         for envvar in settings.rules[0].environment_variables.iter() {
-            assert_eq!(envvar.name.as_ref(), "envar".to_string());
-            assert_eq!(envvar.value.as_ref().unwrap(), "envvar value");
+            assert_eq!(envvar.to_owned(), "envar".to_owned());
         }
-        Ok(())
-    }
-
-    #[test]
-    fn validate_rule_hash_test() -> Result<(), ()> {
-        let mut set = HashSet::new();
-        set.insert(EnvVar {
-            name: "envvar".to_string(),
-            value: Some("value".to_string()),
-        });
-        set.insert(EnvVar {
-            name: "envvar".to_string(),
-            value: Some("value".to_string()),
-        });
-        assert_eq!(set.len(), 1);
-        set.insert(EnvVar {
-            name: "envvar2".to_string(),
-            value: Some("value".to_string()),
-        });
-        assert_eq!(set.len(), 2);
-        set.insert(EnvVar {
-            name: "envvar2".to_string(),
-            value: Some("value2".to_string()),
-        });
-        assert_eq!(set.len(), 3);
         Ok(())
     }
 }

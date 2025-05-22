@@ -4,8 +4,7 @@
 # environment-variable-policy
 
 The environment-variable-policy can be used to inspect environment variables
-defined in the resources deployed in the cluster. It's able to validate both
-variables names and values. The policy allows the users define multiple validation rules.
+defined in the resources deployed in the cluster. The policy allows the users define multiple validation rules.
 And the resource must pass **all** the rules to be allowed in the cluster.
 
 The policy can either target Pods, or workload resources (Deployments, ReplicaSets,
@@ -34,80 +33,86 @@ The resource is denied in the first failed evaluated rule. The following yaml is
 ```yaml
 settings:
   rules:
-    - reject: anyIn
+    - reject: containsAnyOf
       environmentVariables:
-        - name: "envvar1"
-          value: "envvar1_value"
-        - name: "envvar2"
-          value: "envvar2_value"
-
+        - "envvar1"
+        - "envvar2"
 ```
 
 The supported `reject` operator are:
 
+- `containsAnyOf` (default): enforces that the resource has at least one of the
+  `environmentVariables`.
+- `doesNotContainAnyOf`: enforces that the resource does not have any environment
+  variable defined in `environmentVariables`. It's the opposite of `anyIn`.
+- `containsAllOf`: enforces that all of the `environmentVariables` are defined in
+  the resource.
+- `doesNotContainAllOf`: enforces that the `environmentVariables` are not all set
+  together in the resource. It's the opposite of `allAreUsed`.
 
-- `anyIn` (default): checks if any of the `environmentVariables` are in the Pod/Workload resource
-- `anyNotIn`: checks if any of the `environmentVariables` are not in the Pod/Workload resource
-- `allAreUsed`: checks if all of the `environmentVariables` are in the Pod/Workload resource
-- `notAllAreUsed`: checks if all of the `environmentVariables` are not in the Pod/Workload resource
-
-The environment variables are defined as objects:
-```yaml
-- name: "variable name"
-  value: "variable value"
-```
-
-The name should follow the  [C_IDENTIFIER](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#envvar-v1-core)
-standard and the `value` field is optional. When it is not define the `""` value is used by default.
-
-It is not allowed define a rule with an empty `environmentVariables` list.
+The environment variables names should follow the [C_IDENTIFIER](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#envvar-v1-core)
+standard. And it is not allowed define a rule with an empty `environmentVariables` list.
 
 ## Examples
 
-In the following example, the resources that have least one of the variables will be denied:
+Some tables to help you understand the logic of the operators:
 
-```yaml
-settings:
-  rules:
-    - reject: anyIn
-      environmentVariables:
-        - name: "envvar1"
-        - name: "envvar2"
+### `containsAnyOf`
 
-```
+Given these `environmentVariables` settings: `[a, b]`
 
-In the following example, the resources cannot use both environment variables at once, only one or the other
+| Resource environment variables | Evaluation result |
+| ------------------------------ | ----------------- |
+| a                              | Accepted          |
+| b                              | Accepted          |
+| a,b                            | Accepted          |
+| a,b,c                          | Accepted          |
+| c                              | Rejected          |
+| a, c                           | Accepted          |
+| b, c                           | Accepted          |
+| empty                          | Rejected          |
 
-```yaml
-settings:
-  rules:
-    - reject: allAreUsed
-      environmentVariables:
-        - name: "envvar2"
-          value: ""
-```
+### `doesNotContainAnyOf`
 
-In the following example, only resources that have the `envvar3` or `envvar2` defined will be allowed:
+Given these `environmentVariables` settings: `[a, b]`
 
-```yaml
-settings:
-  rules:
-    - reject: anyNotIn
-      environmentVariables:
-        - name: "envvar2"
-          value: "envvar2_value"
-        - name: "envvar3"
-```
+| Resource environment variables | Evaluation result |
+| ------------------------------ | ----------------- |
+| a                              | Rejected          |
+| b                              | Rejected          |
+| a,b                            | Rejected          |
+| a,b,c                          | Rejected          |
+| c                              | Accepted          |
+| a, c                           | Rejected          |
+| b, c                           | Rejected          |
+| empty                          | Accepted          |
 
-In the following example, the resources can use both variables at once, but not only one of them
+### `containsAllOf`
 
-```yaml
-settings:
-  rules:
-    - reject: notAllAreUsed
-      environmentVariables:
-        - name: "envvar3"
-          value: "envvar3_value"
-        - name: "envvar4"
-          value: "envvar4_value"
-```
+Given these `environmentVariables` settings: `[a, b]`
+
+| Resource environment variables | Evaluation result |
+| ------------------------------ | ----------------- |
+| a                              | Rejected          |
+| b                              | Rejected          |
+| a,b                            | Accepted          |
+| a,b,c                          | Accepted          |
+| c                              | Rejected          |
+| a, c                           | Rejected          |
+| b, c                           | Rejected          |
+| empty                          | Rejected          |
+
+### `doesNotContainAllOf`
+
+Given these `environmentVariables` settings: `[a, b]`
+
+| Resource environment variables | Evaluation result |
+| ------------------------------ | ----------------- |
+| a                              | Accepted          |
+| b                              | Accepted          |
+| a,b                            | Rejected          |
+| a,b,c                          | Rejected          |
+| c                              | Accepted          |
+| a, c                           | Accepted          |
+| b, c                           | Accepted          |
+| empty                          | Accepted          |

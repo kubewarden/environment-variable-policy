@@ -126,12 +126,12 @@
               "terminationMessagePolicy": "File",
               "env": [
                 {
-                  "name": "foo",
+                  "name": "a",
                   "value": "bar"
                 },
                 {
-                  "name": "foo2",
-                  "value": "bar2"
+                  "name": "b",
+                  "value": "bar"
                 }
               ]
             }

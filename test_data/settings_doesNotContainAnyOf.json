@@ -1,0 +1,7 @@
+{
+	"criteria": "doesNotContainAnyOf",
+	"envvars": [
+		"a",
+		"b"
+	]
+}

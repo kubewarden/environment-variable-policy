@@ -1,50 +1,19 @@
 questions:
-- default: null
-  description: >-
-    Each rule defined in the policy settings is composed by a reject operator
-    and a set of the environment variables used with the operator against the
-    environment variables from the resources. The rules are evaluated in the
-    order that they are defined. The resource is denied in the first failed
-    evaluated rule.
-  group: Settings
-  label: Description
-  required: false
-  hide_input: true
-  type: string
-  variable: description
-- default: []
-  group: Settings
-  label: Rules
-  hide_input: true
-  type: sequence[
-  variable: rules
-  sequence_questions:
-    - default: anyIn
-      group: Settings
-      label: Reject Operator
-      options:
-        - anyIn
-        - anyNotIn
-        - allAreUsed
-        - notAllAreUsed
-      required: false
-      type: enum
-      variable: reject
-    - default: []
-      description: ''
-      group: Settings
-      label: Environment Variables
-      hide_input: true
-      type: sequence[
-      variable: environmentVariables
-      sequence_questions:
-        - default: ''
-          group: Settings
-          label: Name
-          type: string
-          variable: name
-        - default: ''
-          group: Settings
-          label: Value
-          type: string
-          variable: value
+  - default: "containsAnyOf"
+    description: "Environment variable validation criteria"
+    group: Settings
+    required: true
+    label: "Criteria"
+    variable: "criteria"
+    options:
+      - "containsAnyOf"
+      - "doesNotContainAnyOf"
+      - "containsAllOf"
+      - "doesNotContainAllOf"
+  - default: []
+    label: "Envirionment variables"
+    description: "Environment variables names to be validated with the resources definition"
+    group: Settings
+    variable: envvars
+    required: true
+    type: array[

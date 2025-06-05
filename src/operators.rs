@@ -166,7 +166,7 @@ mod tests {
     #[case(vec!["c"], true)]
     #[case(vec!["b","c"], true)]
     #[case(vec![ ], true)]
-    fn test_does_not_container_all_of(#[case] envvar: Vec<&str>, #[case] is_ok: bool) {
+    fn test_does_not_contain_all_of(#[case] envvar: Vec<&str>, #[case] is_ok: bool) {
         let default_envvar = HashSet::from(["a".to_owned(), "b".to_owned()]);
         let resource_env_var_names: HashSet<String> =
             envvar.into_iter().map(|v| v.to_string()).collect();

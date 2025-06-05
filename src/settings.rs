@@ -66,50 +66,25 @@ mod tests {
     use super::*;
 
     use kubewarden_policy_sdk::settings::Validatable;
+    use rstest::rstest;
 
-    #[test]
-    fn validate_empty_rules_settings() {
+    #[rstest]
+    #[case::empty_settings(vec![], false)]
+    #[case::camelcase(vec!["envVar"], true)]
+    #[case::kebab_case(vec!["env_var", "env_var2", "_Env3_Var3"], true)]
+    #[case::uppercase(vec!["VAR"], true)]
+    #[case::lowercase(vec!["var"], true)]
+    #[case::camelcase_beginning_with_number(vec!["1envVar"], false)]
+    #[case::kebab_case_beginning_with_number(vec!["2env_var"], false)]
+    #[case::uppercase_beginning_with_number(vec!["3VAR"], false)]
+    #[case::lowercase_beginning_with_number(vec!["4var"], false)]
+    fn test_validation(#[case] variables: Vec<&str>, #[case] is_ok: bool) {
         let settings = Settings::ContainsAllOf {
-            envvars: HashSet::new(),
+            envvars: variables
+                .iter()
+                .map(|v| v.to_string())
+                .collect::<HashSet<String>>(),
         };
-        assert!(
-            settings.validate().is_err(),
-            "Empty environment variable list is not allowed"
-        );
-    }
-
-    #[test]
-    fn settings_should_allow_envvar_name() {
-        let settings = Settings::ContainsAnyOf {
-            envvars: HashSet::from([
-                "EnvVar".to_owned(),
-                "Env_var2".to_owned(),
-                "_Env3_Var3".to_owned(),
-                "_env3_var3".to_owned(),
-                "_env_var3".to_owned(),
-                "env_var2".to_owned(),
-                "envvar".to_owned(),
-            ]),
-        };
-        assert!(
-            settings.validate().is_ok(),
-            "Environment variables should allow only names."
-        );
-    }
-
-    #[test]
-    fn settings_should_not_allow_envvar_beginning_with_numbers() {
-        let settings = Settings::ContainsAnyOf {
-            envvars: HashSet::from([
-                "1envvar".to_owned(),
-                "2envvar2".to_owned(),
-                "3env_var3".to_owned(),
-                "4_env_var4".to_owned(),
-            ]),
-        };
-        assert!(
-            settings.validate().is_err(),
-            "Environment variables should not beginning with digits"
-        );
+        assert_eq!(settings.validate().is_ok(), is_ok);
     }
 }

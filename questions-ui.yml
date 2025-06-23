@@ -5,6 +5,7 @@ questions:
     required: true
     label: "Criteria"
     variable: "criteria"
+    type: enum
     options:
       - "containsAnyOf"
       - "doesNotContainAnyOf"

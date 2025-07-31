@@ -30,6 +30,9 @@ fn validate_envvar(settings: &Settings, env_vars: &[String]) -> Result<()> {
         Settings::DoesNotContainAnyOf { envvars } => {
             does_not_contain_any_of(envvars, &resource_env_var_names)
         }
+        Settings::ContainsOtherThan { envvars } => {
+            contains_other_than(envvars, &resource_env_var_names)
+        }
         Settings::DoesNotContainOtherThan { envvars } => {
             does_not_contain_other_than(envvars, &resource_env_var_names)
         }

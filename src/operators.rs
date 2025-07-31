@@ -10,6 +10,8 @@ pub(crate) const CONTAINS_ALL_OF_ERROR_MSG: &str =
     "Resource is missing required environment variables as specified in the validation rules. The following environment variables are missing:";
 pub(crate) const DOES_NOT_CONTAIN_ALL_OF_ERROR_MSG: &str =
     "Resource has conflicting environment variables set according to the validation rules. The following environment variables should not be set together:";
+pub(crate) const CONTAINS_OTHER_THAN_ERROR_MSG: &str =
+    "Resource must not have any environment variables other than those specified in the validation rule. The following environment variables were found that should not be present:";
 pub(crate) const DOES_NOT_CONTAIN_OTHER_THAN_ERROR_MSG: &str =
     "Resource must have only environment variables from the validation rule. The following environment variables were found that should not be present:";
 
@@ -78,6 +80,24 @@ pub(crate) fn does_not_contain_all_of(
         ));
     }
     Ok(())
+}
+
+pub(crate) fn contains_other_than(
+    contains_other_than: &HashSet<String>,
+    resource_env_var_names: &HashSet<String>,
+) -> Result<()> {
+    if resource_env_var_names.is_subset(contains_other_than) {
+        let invalid_envvars = resource_env_var_names
+            .difference(contains_other_than)
+            .cloned()
+            .collect::<Vec<String>>();
+        Err(anyhow!(
+            "{CONTAINS_OTHER_THAN_ERROR_MSG} {}",
+            invalid_envvars.join(", ")
+        ))
+    } else {
+        Ok(())
+    }
 }
 
 // implements an allowlist
@@ -201,6 +221,30 @@ mod tests {
                 error
                     .to_string()
                     .contains(DOES_NOT_CONTAIN_ALL_OF_ERROR_MSG),
+                "Validation error message does not contain expected text"
+            );
+        }
+    }
+
+    #[rstest]
+    #[case(vec![ "a"], false)]
+    #[case(vec![ "a", "b"], false)]
+    #[case(vec![ "a", "b","c"], true)]
+    #[case(vec![ "c"], true)]
+    #[case(vec![ "b", "c"], true)]
+    #[case(vec![ ], false)]
+    fn test_contains_other_than(#[case] envvar: Vec<&str>, #[case] is_ok: bool) {
+        let default_envvar = HashSet::from(["a".to_owned(), "b".to_owned()]);
+        let resource_env_var_names: HashSet<String> =
+            envvar.into_iter().map(|v| v.to_string()).collect();
+
+        let result = contains_other_than(&default_envvar, &resource_env_var_names);
+        if is_ok {
+            result.expect("Expected validation to pass");
+        } else {
+            let error = result.expect_err("Expected validation to fail");
+            assert!(
+                error.to_string().contains(CONTAINS_OTHER_THAN_ERROR_MSG),
                 "Validation error message does not contain expected text"
             );
         }

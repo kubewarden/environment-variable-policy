@@ -138,6 +138,21 @@ Given these `environmentVariables` settings: `[a, b]`
 | b, c                           | Accepted          |
 | empty                          | Accepted          |
 
+## `containsOtherThan`
+
+Given these `environmentVariables` settings: `[a, b]`
+
+| Resource environment variables | Evaluation result |
+| ------------------------------ | ----------------- |
+| a                              | rejected          |
+| b                              | rejected          |
+| a,b                            | rejected          |
+| a,b,c                          | accepted          |
+| c                              | accepted          |
+| a, c                           | accepted          |
+| b, c                           | accepted          |
+| empty                          | rejected          |
+
 ### `doesNotContainOtherThan` (allowlist)
 
 Given these `environmentVariables` settings: `[a, b]`

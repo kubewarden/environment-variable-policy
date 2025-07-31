@@ -36,12 +36,12 @@ fn validate_envvar(settings: &Settings, env_vars: &[String]) -> Result<()> {
 fn get_containers_env_vars(containers: &[Container]) -> HashMap<String, Vec<String>> {
     let mut results = HashMap::new();
     for container in containers {
-        if let Some(envvar) = &container.env {
-            results.insert(
-                container.name.clone(),
-                envvar.iter().map(|e| e.name.clone()).collect(),
-            );
-        }
+        let envvar_names = match &container.env {
+            Some(envvar) => envvar.iter().map(|e| e.name.clone()).collect(),
+            None => Vec::new(), // insert empty vector when no env vars are present, we should
+                                // evaluate this case too for containsAnyOf and containsAllOf
+        };
+        results.insert(container.name.clone(), envvar_names);
     }
     results
 }
@@ -51,12 +51,12 @@ fn get_ephemeral_containers_env_vars(
 ) -> HashMap<String, Vec<String>> {
     let mut results = HashMap::new();
     for container in containers {
-        if let Some(envvar) = &container.env {
-            results.insert(
-                container.name.clone(),
-                envvar.iter().map(|e| e.name.clone()).collect(),
-            );
-        }
+        let envvar_names = match &container.env {
+            Some(envvar) => envvar.iter().map(|e| e.name.clone()).collect(),
+            None => Vec::new(), // insert empty vector when no env vars are present, we should
+                                // evaluate this case too for containsAnyOf and containsAllOf
+        };
+        results.insert(container.name.clone(), envvar_names);
     }
     results
 }

@@ -7,6 +7,13 @@
 	[ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
  }
 
+@test "Test containsAnyOf against no env vars" {
+	run kwctl run --request-path test_data/deployment_no_envvars.json --settings-path test_data/settings_containsAnyOf.json annotated-policy.wasm
+	[ "$status" -eq 0 ]
+	echo "$output"
+	[ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
+}
+
 @test "Test doesNotContainAnyOf" {
 	run kwctl run  --request-path test_data/deployment_doesNotContainAnyOf.json --settings-path test_data/settings_doesNotContainAnyOf.json  annotated-policy.wasm
 	[ "$status" -eq 0 ]

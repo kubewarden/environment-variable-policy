@@ -33,30 +33,32 @@ fn validate_envvar(settings: &Settings, env_vars: &[String]) -> Result<()> {
     }
 }
 
+// Returns a map with container names as keys and their environment variable names as values
 fn get_containers_env_vars(containers: &[Container]) -> HashMap<String, Vec<String>> {
     let mut results = HashMap::new();
     for container in containers {
-        if let Some(envvar) = &container.env {
-            results.insert(
-                container.name.clone(),
-                envvar.iter().map(|e| e.name.clone()).collect(),
-            );
-        }
+        let envvar_names: Vec<String> = container
+            .env
+            .as_ref()
+            .map(|envvars| envvars.iter().map(|e| e.name.clone()).collect())
+            .unwrap_or_default();
+        results.insert(container.name.clone(), envvar_names);
     }
     results
 }
 
+// Returns a map with ephemeral container names as keys and their environment variable names as values
 fn get_ephemeral_containers_env_vars(
     containers: &[EphemeralContainer],
 ) -> HashMap<String, Vec<String>> {
     let mut results = HashMap::new();
     for container in containers {
-        if let Some(envvar) = &container.env {
-            results.insert(
-                container.name.clone(),
-                envvar.iter().map(|e| e.name.clone()).collect(),
-            );
-        }
+        let envvar_names: Vec<String> = container
+            .env
+            .as_ref()
+            .map(|envvars| envvars.iter().map(|e| e.name.clone()).collect())
+            .unwrap_or_default();
+        results.insert(container.name.clone(), envvar_names);
     }
     results
 }
@@ -106,51 +108,116 @@ mod tests {
 
     use crate::CONTAINS_ANY_OF_ERROR_MSG;
 
-    #[test]
-    fn test_envvar_extraction() {
-        let envvars = ["a".to_owned(), "c".to_owned()];
-        let container_envvar = Some(
-            envvars
-                .iter()
-                .map(|name| apicore::EnvVar {
-                    name: name.clone(),
-                    ..Default::default()
-                })
-                .collect::<Vec<_>>(),
-        );
+    use rstest::rstest;
 
-        let containers = vec![
+    #[rstest]
+    #[case(
+        vec![
             apicore::Container {
                 name: "test-container1".to_string(),
-                env: container_envvar.clone(),
+                env: Some(vec![
+                    apicore::EnvVar {
+                        name: "a".to_string(),
+                        ..Default::default()
+                    },
+                    apicore::EnvVar {
+                        name: "b".to_string(),
+                        ..Default::default()
+                    },
+                ]),
                 ..Default::default()
             },
             apicore::Container {
                 name: "test-container2".to_string(),
-                env: container_envvar.clone(),
+                env: Some(vec![
+                    apicore::EnvVar {
+                        name: "x".to_string(),
+                        ..Default::default()
+                    },
+                    apicore::EnvVar {
+                        name: "y".to_string(),
+                        ..Default::default()
+                    },
+                ]),
                 ..Default::default()
             },
-        ];
-        let ephemeral_containers = vec![
+        ],
+        HashMap::from([
+            ("test-container1".to_string(), vec!["a".to_owned(), "b".to_owned()]),
+            ("test-container2".to_string(), vec!["x".to_owned(), "y".to_owned()]),
+        ])
+    )]
+    #[case(
+        vec![
+            apicore::Container {
+                name: "test-container3".to_string(),
+                env: None,
+                ..Default::default()
+            },
+        ],
+        HashMap::from([("test-container3".to_string(), vec![])])
+    )]
+    fn test_get_containers_env_vars(
+        #[case] containers: Vec<apicore::Container>,
+        #[case] expected: HashMap<String, Vec<String>>,
+    ) {
+        let result = get_containers_env_vars(&containers);
+        assert_eq!(result, expected);
+    }
+
+    #[rstest]
+    #[case(
+        vec![
             apicore::EphemeralContainer {
-                name: "test-container1".to_string(),
-                env: container_envvar.clone(),
+                name: "test-ephemeral1".to_string(),
+                env: Some(vec![
+                    apicore::EnvVar {
+                        name: "foo".to_owned(),
+                        ..Default::default()
+                    },
+                    apicore::EnvVar {
+                        name: "bar".to_owned(),
+                        ..Default::default()
+                    },
+                ]),
                 ..Default::default()
             },
             apicore::EphemeralContainer {
-                name: "test-container2".to_string(),
-                env: container_envvar.clone(),
+                name: "test-ephemeral2".to_string(),
+                env: Some(vec![
+                    apicore::EnvVar {
+                        name: "baz".to_owned(),
+                        ..Default::default()
+                    },
+                    apicore::EnvVar {
+                        name: "qux".to_owned(),
+                        ..Default::default()
+                    },
+                ]),
                 ..Default::default()
             },
-        ];
-        let mut result = get_containers_env_vars(&containers);
-        assert_eq!(result.get("test-container1").unwrap(), &envvars.to_vec());
-        assert_eq!(result.get("test-container2").unwrap(), &envvars.to_vec());
-        assert_eq!(result.len(), 2);
-        result = get_ephemeral_containers_env_vars(&ephemeral_containers);
-        assert_eq!(result.get("test-container1").unwrap(), &envvars.to_vec());
-        assert_eq!(result.get("test-container2").unwrap(), &envvars.to_vec());
-        assert_eq!(result.len(), 2);
+        ],
+        HashMap::from([
+            ("test-ephemeral1".to_string(), vec!["foo".to_owned(), "bar".to_owned()]),
+            ("test-ephemeral2".to_string(), vec!["baz".to_owned(), "qux".to_owned()]),
+        ])
+    )]
+    #[case(
+        vec![
+            apicore::EphemeralContainer {
+                name: "test-ephemeral3".to_string(),
+                env: None,
+                ..Default::default()
+            },
+        ],
+        HashMap::from([("test-ephemeral3".to_string(), vec![])])
+    )]
+    fn test_get_ephemeral_containers_env_vars(
+        #[case] ephemeral_containers: Vec<apicore::EphemeralContainer>,
+        #[case] expected: HashMap<String, Vec<String>>,
+    ) {
+        let result = get_ephemeral_containers_env_vars(&ephemeral_containers);
+        assert_eq!(result, expected);
     }
 
     #[test]

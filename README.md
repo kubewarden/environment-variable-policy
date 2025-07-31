@@ -93,7 +93,7 @@ Given these `environmentVariables` settings: `[a, b]`
 | b, c                           | Accepted          |
 | empty                          | Rejected          |
 
-### `doesNotContainAnyOf`
+### `doesNotContainAnyOf` (denylist)
 
 Given these `environmentVariables` settings: `[a, b]`
 

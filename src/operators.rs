@@ -30,6 +30,7 @@ pub(crate) fn contains_any_of(
     Ok(())
 }
 
+// implements a denylist
 pub(crate) fn does_not_contain_any_of(
     does_not_contains_any_of: &HashSet<String>,
     resource_env_var_names: &HashSet<String>,

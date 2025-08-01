@@ -34,3 +34,24 @@
 	echo "$output"
 	[ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
 }
+
+@test "Test containsOtherThan" {
+	run kwctl run --request-path test_data/deployment_containsOtherThan.json --settings-path test_data/settings_containsOtherThan.json annotated-policy.wasm
+	[ "$status" -eq 0 ]
+	echo "$output"
+	[ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
+}
+
+@test "Test doesNotContainOtherThan" {
+	run kwctl run --request-path test_data/deployment_doesNotContainOtherThan.json --settings-path test_data/settings_doesNotContainOtherThan.json annotated-policy.wasm
+	[ "$status" -eq 0 ]
+	echo "$output"
+	[ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
+}
+
+@test "Test doesNotContainOtherThan against no env vars" {
+	run kwctl run --request-path test_data/deployment_no_envvars.json --settings-path test_data/settings_doesNotContainOtherThan.json annotated-policy.wasm
+	[ "$status" -eq 0 ]
+	echo "$output"
+	[ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
+}

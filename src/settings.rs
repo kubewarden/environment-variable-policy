@@ -12,6 +12,8 @@ pub(crate) enum Settings {
     DoesNotContainAllOf { envvars: HashSet<String> },
     ContainsAnyOf { envvars: HashSet<String> },
     DoesNotContainAnyOf { envvars: HashSet<String> },
+    ContainsOtherThan { envvars: HashSet<String> },
+    DoesNotContainOtherThan { envvars: HashSet<String> },
 }
 
 // It's not possible to use the Default in the derive macro because we cannot
@@ -35,6 +37,8 @@ impl kubewarden::settings::Validatable for Settings {
             Settings::DoesNotContainAllOf { envvars } => envvars,
             Settings::ContainsAnyOf { envvars } => envvars,
             Settings::DoesNotContainAnyOf { envvars } => envvars,
+            Settings::ContainsOtherThan { envvars } => envvars,
+            Settings::DoesNotContainOtherThan { envvars } => envvars,
         };
         if envvars.is_empty() {
             return Err("Empty environment variable list is not allowed".to_string());

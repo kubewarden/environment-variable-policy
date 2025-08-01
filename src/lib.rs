@@ -30,6 +30,12 @@ fn validate_envvar(settings: &Settings, env_vars: &[String]) -> Result<()> {
         Settings::DoesNotContainAnyOf { envvars } => {
             does_not_contain_any_of(envvars, &resource_env_var_names)
         }
+        Settings::ContainsOtherThan { envvars } => {
+            contains_other_than(envvars, &resource_env_var_names)
+        }
+        Settings::DoesNotContainOtherThan { envvars } => {
+            does_not_contain_other_than(envvars, &resource_env_var_names)
+        }
     }
 }
 
@@ -276,10 +282,8 @@ mod tests {
         assert_eq!(errors.len(), 6, "Expected 6 errors, got {}", errors.len());
         for c in 1..6 {
             assert!(
-                errors.iter().any(|errmsg| errmsg.starts_with(&format!(
-                    "test-container{}: {} ",
-                    c, CONTAINS_ANY_OF_ERROR_MSG
-                ))),
+                errors.iter().any(|errmsg| errmsg
+                    .starts_with(&format!("test-container{c}: {CONTAINS_ANY_OF_ERROR_MSG} "))),
                 "Validation error message does not contain expected text"
             );
         }

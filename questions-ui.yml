@@ -11,8 +11,10 @@ questions:
       - "doesNotContainAnyOf"
       - "containsAllOf"
       - "doesNotContainAllOf"
+      - "containsOtherThan"
+      - "doesNotContainOtherThan"
   - default: []
-    label: "Envirionment variables"
+    label: "Environment variables"
     description: "Environment variables names to be validated with the resources definition"
     group: Settings
     variable: envvars

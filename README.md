@@ -93,7 +93,7 @@ Given these `environmentVariables` settings: `[a, b]`
 | b, c                           | Accepted          |
 | empty                          | Rejected          |
 
-### `doesNotContainAnyOf`
+### `doesNotContainAnyOf` (denylist)
 
 Given these `environmentVariables` settings: `[a, b]`
 
@@ -137,3 +137,33 @@ Given these `environmentVariables` settings: `[a, b]`
 | a, c                           | Accepted          |
 | b, c                           | Accepted          |
 | empty                          | Accepted          |
+
+## `containsOtherThan`
+
+Given these `environmentVariables` settings: `[a, b]`
+
+| Resource environment variables | Evaluation result |
+| ------------------------------ | ----------------- |
+| a                              | rejected          |
+| b                              | rejected          |
+| a,b                            | rejected          |
+| a,b,c                          | accepted          |
+| c                              | accepted          |
+| a, c                           | accepted          |
+| b, c                           | accepted          |
+| empty                          | rejected          |
+
+### `doesNotContainOtherThan` (allowlist)
+
+Given these `environmentVariables` settings: `[a, b]`
+
+| Resource environment variables | Evaluation result |
+| ------------------------------ | ----------------- |
+| a                              | accepted          |
+| b                              | accepted          |
+| a,b                            | accepted          |
+| a,b,c                          | rejected          |
+| c                              | rejected          |
+| a, c                           | rejected          |
+| b, c                           | rejected          |
+| empty                          | accepted          |

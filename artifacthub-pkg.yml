@@ -4,16 +4,16 @@
 #
 # This config can be saved to its default location with:
 #   kwctl scaffold artifacthub > artifacthub-pkg.yml 
-version: 2.0.3
+version: 2.1.0
 name: environment-variable-policy
 displayName: Environment Variable Policy
-createdAt: 2025-07-31T13:08:31.476506033Z
+createdAt: 2025-08-01T09:24:55.115877673Z
 description: A Kubewarden Policy that controls the usage of environment variables
 license: Apache-2.0
 homeURL: https://github.com/kubewarden/environment-variable-policy
 containersImages:
 - name: policy
-  image: ghcr.io/kubewarden/policies/environment-variable-policy:v2.0.3
+  image: ghcr.io/kubewarden/policies/environment-variable-policy:v2.1.0
 keywords:
 - deployment
 - replicaset
@@ -27,17 +27,17 @@ keywords:
 - environment-variables
 links:
 - name: policy
-  url: https://github.com/kubewarden/environment-variable-policy/releases/download/v2.0.3/policy.wasm
+  url: https://github.com/kubewarden/environment-variable-policy/releases/download/v2.1.0/policy.wasm
 - name: source
   url: https://github.com/kubewarden/environment-variable-policy
 install: |
   The policy can be obtained using [`kwctl`](https://github.com/kubewarden/kwctl):
   ```console
-  kwctl pull ghcr.io/kubewarden/policies/environment-variable-policy:v2.0.3
+  kwctl pull ghcr.io/kubewarden/policies/environment-variable-policy:v2.1.0
   ```
   Then, generate the policy manifest and tune it to your liking. For example:
   ```console
-  kwctl scaffold manifest -t ClusterAdmissionPolicy registry://ghcr.io/kubewarden/policies/environment-variable-policy:v2.0.3
+  kwctl scaffold manifest -t ClusterAdmissionPolicy registry://ghcr.io/kubewarden/policies/environment-variable-policy:v2.1.0
   ```
 maintainers:
 - name: Kubewarden developers
@@ -62,8 +62,10 @@ annotations:
           - "doesNotContainAnyOf"
           - "containsAllOf"
           - "doesNotContainAllOf"
+          - "containsOtherThan"
+          - "doesNotContainOtherThan"
       - default: []
-        label: "Envirionment variables"
+        label: "Environment variables"
         description: "Environment variables names to be validated with the resources definition"
         group: Settings
         variable: envvars

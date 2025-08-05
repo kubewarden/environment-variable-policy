@@ -1,21 +1,15 @@
 use std::collections::HashSet;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
-pub(crate) const CONTAINS_ANY_OF_ERROR_MSG: &str =
-    "Resource must have at least one of the required environment variables specified by the validation rule. None of the expected environment variables were found:";
-pub(crate) const DOES_NOT_CONTAIN_ANY_OF_ERROR_MSG: &str =
-    "Resource must not have any of the environment variables specified in the validation rule. The following invalid environment variables were found:";
-pub(crate) const CONTAINS_ALL_OF_ERROR_MSG: &str =
-    "Resource is missing required environment variables as specified in the validation rules. The following environment variables are missing:";
-pub(crate) const DOES_NOT_CONTAIN_ALL_OF_ERROR_MSG: &str =
-    "Resource has conflicting environment variables set according to the validation rules. The following environment variables should not be set together:";
-pub(crate) const CONTAINS_OTHER_THAN_ERROR_MSG: &str =
-    "Resource must not have any environment variables other than those specified in the validation rule. The following environment variables were found that should not be present:";
-pub(crate) const DOES_NOT_CONTAIN_OTHER_THAN_ERROR_MSG: &str =
-    "Resource must have only environment variables from the validation rule. The following environment variables were found that should not be present:";
+pub const CONTAINS_ANY_OF_ERROR_MSG: &str = "Resource must have at least one of the required environment variables specified by the validation rule. None of the expected environment variables were found:";
+pub const DOES_NOT_CONTAIN_ANY_OF_ERROR_MSG: &str = "Resource must not have any of the environment variables specified in the validation rule. The following invalid environment variables were found:";
+pub const CONTAINS_ALL_OF_ERROR_MSG: &str = "Resource is missing required environment variables as specified in the validation rules. The following environment variables are missing:";
+pub const DOES_NOT_CONTAIN_ALL_OF_ERROR_MSG: &str = "Resource has conflicting environment variables set according to the validation rules. The following environment variables should not be set together:";
+pub const CONTAINS_OTHER_THAN_ERROR_MSG: &str = "Resource must not have any environment variables other than those specified in the validation rule. The following environment variables were found that should not be present:";
+pub const DOES_NOT_CONTAIN_OTHER_THAN_ERROR_MSG: &str = "Resource must have only environment variables from the validation rule. The following environment variables were found that should not be present:";
 
-pub(crate) fn contains_any_of(
+pub fn contains_any_of(
     contains_any_of: &HashSet<String>,
     resource_env_var_names: &HashSet<String>,
 ) -> Result<()> {
@@ -31,7 +25,7 @@ pub(crate) fn contains_any_of(
 }
 
 // implements a denylist
-pub(crate) fn does_not_contain_any_of(
+pub fn does_not_contain_any_of(
     does_not_contains_any_of: &HashSet<String>,
     resource_env_var_names: &HashSet<String>,
 ) -> Result<()> {
@@ -49,7 +43,7 @@ pub(crate) fn does_not_contain_any_of(
     ))
 }
 
-pub(crate) fn contains_all_of(
+pub fn contains_all_of(
     contains_all_of: &HashSet<String>,
     resource_env_var_names: &HashSet<String>,
 ) -> Result<()> {
@@ -66,7 +60,7 @@ pub(crate) fn contains_all_of(
     ))
 }
 
-pub(crate) fn does_not_contain_all_of(
+pub fn does_not_contain_all_of(
     does_not_contains_all_of: &HashSet<String>,
     resource_env_var_names: &HashSet<String>,
 ) -> Result<()> {
@@ -83,7 +77,7 @@ pub(crate) fn does_not_contain_all_of(
     Ok(())
 }
 
-pub(crate) fn contains_other_than(
+pub fn contains_other_than(
     contains_other_than: &HashSet<String>,
     resource_env_var_names: &HashSet<String>,
 ) -> Result<()> {
@@ -102,7 +96,7 @@ pub(crate) fn contains_other_than(
 }
 
 // implements an allowlist
-pub(crate) fn does_not_contain_other_than(
+pub fn does_not_contain_other_than(
     does_not_contain_other_than: &HashSet<String>,
     resource_env_var_names: &HashSet<String>,
 ) -> Result<()> {

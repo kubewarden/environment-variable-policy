@@ -6,10 +6,9 @@ use k8s_openapi::api::core::v1::{self as apicore, Container, EphemeralContainer}
 use kubewarden_policy_sdk::wapc_guest as guest;
 extern crate kubewarden_policy_sdk as kubewarden;
 use kubewarden::{protocol_version_guest, request::ValidationRequest, validate_settings};
-use operators::*;
+use operators::operators::*;
 use settings::Settings;
 
-mod operators;
 mod settings;
 
 #[no_mangle]
@@ -112,7 +111,7 @@ fn validate(payload: &[u8]) -> CallResult {
 mod tests {
     use super::*;
 
-    use crate::CONTAINS_ANY_OF_ERROR_MSG;
+    use operators::operators::CONTAINS_ANY_OF_ERROR_MSG;
 
     use rstest::rstest;
 

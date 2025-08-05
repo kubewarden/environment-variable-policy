@@ -15,6 +15,7 @@ fmt:
 .PHONY: lint
 lint:
 	cargo clippy -- -D warnings
+	cargo clippy --package operators -- -D warnings
 
 .PHONY: e2e-tests
 e2e-tests: annotated-policy.wasm
@@ -23,6 +24,7 @@ e2e-tests: annotated-policy.wasm
 .PHONY: test
 test: fmt lint
 	cargo test
+	cargo test --package operators
 
 .PHONY: clean
 clean:

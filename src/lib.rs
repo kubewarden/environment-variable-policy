@@ -21,19 +21,23 @@ pub extern "C" fn wapc_init() {
 fn validate_envvar(settings: &Settings, env_vars: &[String]) -> Result<()> {
     let resource_env_var_names: HashSet<String> = env_vars.iter().cloned().collect();
     match settings {
-        Settings::ContainsAllOf { envvars } => contains_all_of(envvars, &resource_env_var_names),
-        Settings::DoesNotContainAllOf { envvars } => {
-            does_not_contain_all_of(envvars, &resource_env_var_names)
+        Settings::ContainsAllOf { envvars } => {
+            contains_all_of(envvars, &resource_env_var_names, "envvar")
         }
-        Settings::ContainsAnyOf { envvars } => contains_any_of(envvars, &resource_env_var_names),
+        Settings::DoesNotContainAllOf { envvars } => {
+            does_not_contain_all_of(envvars, &resource_env_var_names, "envvar")
+        }
+        Settings::ContainsAnyOf { envvars } => {
+            contains_any_of(envvars, &resource_env_var_names, "envvar")
+        }
         Settings::DoesNotContainAnyOf { envvars } => {
-            does_not_contain_any_of(envvars, &resource_env_var_names)
+            does_not_contain_any_of(envvars, &resource_env_var_names, "envvar")
         }
         Settings::ContainsOtherThan { envvars } => {
-            contains_other_than(envvars, &resource_env_var_names)
+            contains_other_than(envvars, &resource_env_var_names, "envvar")
         }
         Settings::DoesNotContainOtherThan { envvars } => {
-            does_not_contain_other_than(envvars, &resource_env_var_names)
+            does_not_contain_other_than(envvars, &resource_env_var_names, "envvar")
         }
     }
 }
@@ -110,8 +114,6 @@ fn validate(payload: &[u8]) -> CallResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use operators::operators::CONTAINS_ANY_OF_ERROR_MSG;
 
     use rstest::rstest;
 
@@ -281,8 +283,10 @@ mod tests {
         assert_eq!(errors.len(), 6, "Expected 6 errors, got {}", errors.len());
         for c in 1..6 {
             assert!(
-                errors.iter().any(|errmsg| errmsg
-                    .starts_with(&format!("test-container{c}: {CONTAINS_ANY_OF_ERROR_MSG} "))),
+                errors.iter().any(|errmsg| errmsg.starts_with(&format!(
+                    "test-container{c}: {} ",
+                    contains_any_of_error_msg("envvar")
+                ))),
                 "Validation error message does not contain expected text"
             );
         }

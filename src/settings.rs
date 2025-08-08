@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
-use operators::kubewarden_policy_sdk as kubewarden;
-use operators::settings::BaseSettings;
+use criteria_policy_base::{kubewarden_policy_sdk as kubewarden, settings::BaseSettings};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
@@ -53,7 +52,7 @@ impl kubewarden::settings::Validatable for Settings {
 mod tests {
     use super::*;
 
-    use operators::kubewarden_policy_sdk::settings::Validatable;
+    use kubewarden::settings::Validatable;
     use rstest::rstest;
 
     #[rstest]

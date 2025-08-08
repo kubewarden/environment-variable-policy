@@ -72,6 +72,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "criteria_policy_base"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "const_format",
+ "criteria_policy_base",
+ "k8s-openapi",
+ "kubewarden-policy-sdk",
+ "rstest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+]
+
+[[package]]
 name = "darling"
 version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -153,8 +168,8 @@ name = "environment-variable-policy"
 version = "3.0.0"
 dependencies = [
  "anyhow",
+ "criteria_policy_base",
  "k8s-openapi",
- "operators",
  "regex",
  "rstest",
  "serde",
@@ -553,20 +568,6 @@ name = "once_cell"
 version = "1.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
-
-[[package]]
-name = "operators"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "const_format",
- "kubewarden-policy-sdk",
- "operators",
- "rstest",
- "serde",
- "serde_json",
- "serde_yaml",
-]
 
 [[package]]
 name = "parking_lot"

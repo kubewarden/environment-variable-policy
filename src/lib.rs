@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 
 use anyhow::{anyhow, Result};
+use criteria_policy_base::{
+    kubewarden_policy_sdk::{
+        accept_request, protocol_version_guest, reject_request, request::ValidationRequest,
+        validate_settings, wapc_guest as guest,
+    },
+    validate::validate_values,
+};
 use guest::prelude::*;
 use k8s_openapi::api::core::v1::{self as apicore, Container, EphemeralContainer};
-use kubewarden::{protocol_version_guest, request::ValidationRequest, validate_settings};
-use operators::kubewarden_policy_sdk as kubewarden;
-use operators::kubewarden_policy_sdk::wapc_guest as guest;
-use operators::validate::validate_values;
 use settings::Settings;
 
 mod settings;
@@ -86,9 +89,9 @@ fn validate(payload: &[u8]) -> CallResult {
     if let Err(errors) =
         validate_environment_variables(&pod_spec.unwrap_or_default(), &validation_request.settings)
     {
-        return kubewarden::reject_request(Some(errors.join(", ")), None, None, None);
+        return reject_request(Some(errors.join(", ")), None, None, None);
     }
-    kubewarden::accept_request()
+    accept_request()
 }
 
 #[cfg(test)]
@@ -97,9 +100,7 @@ mod tests {
 
     use std::collections::HashSet;
 
-    use operators::constants::CONTAINS_ANY_OF_ERROR_MSG;
-    use operators::settings::BaseSettings;
-
+    use criteria_policy_base::{constants::CONTAINS_ANY_OF_ERROR_MSG, settings::BaseSettings};
     use rstest::rstest;
 
     #[rstest]

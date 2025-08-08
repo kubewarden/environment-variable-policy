@@ -1,78 +1,17 @@
-[![Kubewarden Policy Repository](https://github.com/kubewarden/community/blob/main/badges/kubewarden-policies.svg)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#policy-scope)
-[![Stable](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#stable)
+This is a helper crate that allows to easily scaffold a policy that validates a
+list of strings using a well defined list of criteria.
 
-# environment-variable-policy
+The allowed criteria are:
 
-The environment-variable-policy can be used to inspect environment variables
-defined in the resources deployed in the cluster.
+- `containsAnyOf`
+- `doesNotContainAllOf`
+- `containsAllOf`
+- `doesNotContainAllOf`
+- `containsOtherThan`
+- `doesNotContainOtherThan`
 
-The policy can either target Pods, or workload resources (Deployments,
-ReplicaSets, DaemonSets, ReplicationControllers, Jobs, CronJobs). Both have
-trade-offs:
-
-- Policy targets Pods: Different kind of resources (be them native or CRDs) can
-  create Pods. By having the policy target Pods, we guarantee that all the Pods
-  are going to be compliant, even those created from CRDs. However, this could
-  lead to confusion among users, as high level Kubernetes resources would be
-  successfully created, but they would stay in a non reconciled state. Example: a
-  Deployment creating a non-compliant Pod would be created, but it would never
-  have all its replicas running.
-
-- Policy targets workload resources (e.g: Deployment): the policy inspect
-  higher order resource (e.g. Deployment): users will get immediate feedback
-  about rejections. However, non compliant pods created by another high level
-  resource (be it native to Kubernetes, or a CRD), may not get rejected.
-
-## Settings
-
-> [!WARNING]  
-> If you are upgrading from version v1.x.x, please note the breaking changes
-> introduced in v2.x.x:
->
-> Environment variable values are no longer considered.
->
-> The policy now focuses solely on the name of the environment variable, not
-> its value.
->
-> New settings syntax
->
-> The settings no longer use a list of rules for validation. Instead, the
-> policy validates a single type of condition. Refer to the "Current Settings
-> Fields" section below for details on the new settings.
-
-The policy settings has the `criteria` field which define the logic operatation
-performed with the `values` defined in the settings and the environment variables
-defined in the resource:
-
-```yaml
-settings:
-  criteria: "containsAnyOf"
-  values:
-    - MARIADB_USER
-    - MARIADB_PASSWORD
-```
-
-The `criteria` configuration can have the following values:
-
-- `containsAnyOf`: enforces that the resource has at least one of the
-  `environmentVariables`.
-- `doesNotContainAnyOf`: enforces that the resource does not have any environment
-  variable defined in `environmentVariables`. It's the opposite of `containsAnyOf`.
-- `containsAllOf`: enforces that all of the `environmentVariables` are defined in
-  the resource.
-- `doesNotContainAllOf`: enforces that the `environmentVariables` are not all set
-  together in the resource. It's the opposite of `containsAllOf`.
-
-The `values` field must contain at least one environment variable name for
-validation. Environment variable names should follow the C_IDENTIFIER standard.
-
-> [!IMPORTANT]  
-> An empty list of environment variable names is not allowed.
-
-If you require more complex environment variable validation, consider the use
-of [Kubewarden policy groups](https://docs.kubewarden.io/howtos/policy-groups).
-With policy groups, you can combine multiple validations using complex logical
-operators to function as a single policy.
+Right now we expect this library to be consumed by policies that are validating
+environment variables, labels and annotations.
 
 ## Rules operators logic tables
 
@@ -167,3 +106,27 @@ Given these `environmentVariables` settings: `[a, b]`
 | a, c                           | rejected          |
 | b, c                           | rejected          |
 | empty                          | accepted          |
+
+## How to use the library
+
+The errors messages contain the name of the resource the final policy
+evaluates.
+
+The name of the resource being evaluated is set inside of `lib.rs` and
+is set by looking at the presence of specific feature flags.
+
+The settings of the real policy is driven by the structure of the `settings::BaseSettings`
+enumeration:
+
+```yaml
+settings:
+  criteria: "containsAnyOf"
+  values:
+    - MARIADB_USER
+    - MARIADB_PASSWORD
+```
+
+More work would be needed if the real policy needs other setting values.
+
+The actual validation is then done by the `validate::validate_values` function
+that must be called by the real policy.

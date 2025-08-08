@@ -23,11 +23,17 @@ use serde::{Deserialize, Serialize};
 #[serde(tag = "criteria")]
 #[allow(clippy::enum_variant_names)]
 pub enum BaseSettings {
-    ContainsAllOf { values: HashSet<String> },
-    DoesNotContainAllOf { values: HashSet<String> },
+    /// Enforces that the resource has at least one of the `values` present.
     ContainsAnyOf { values: HashSet<String> },
+    /// Enforces that the resource does not have any of the `values` present (denylist).
     DoesNotContainAnyOf { values: HashSet<String> },
+    /// Enforces that all of the `values` are present in the resource.
+    ContainsAllOf { values: HashSet<String> },
+    /// Enforces that not all of the `values` are present together in the resource.
+    DoesNotContainAllOf { values: HashSet<String> },
+    /// Enforces that the resource contains at least one environment variable not in `values`.
     ContainsOtherThan { values: HashSet<String> },
+    /// Enforces that the resource contains only environment variables from `values` (allowlist).
     DoesNotContainOtherThan { values: HashSet<String> },
 }
 

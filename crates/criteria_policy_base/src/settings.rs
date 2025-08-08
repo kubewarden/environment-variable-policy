@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 /// We could find workaround for this limitation, like trying to use `serde(flatten)`,
 /// but we don't know if that would actually work. Luckily, the real policy
 /// does not require any other configuration, so we can use this enum directly.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(tag = "criteria")]
 #[allow(clippy::enum_variant_names)]

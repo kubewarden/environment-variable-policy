@@ -41,13 +41,13 @@ trade-offs:
 > Fields" section below for details on the new settings.
 
 The policy settings has the `criteria` field which define the logic operatation
-performed with the `envvars` defined in the settings and the environment variables
+performed with the `values` defined in the settings and the environment variables
 defined in the resource:
 
 ```yaml
 settings:
   criteria: "containsAnyOf"
-  envvars:
+  values:
     - MARIADB_USER
     - MARIADB_PASSWORD
 ```
@@ -63,7 +63,7 @@ The `criteria` configuration can have the following values:
 - `doesNotContainAllOf`: enforces that the `environmentVariables` are not all set
   together in the resource. It's the opposite of `containsAllOf`.
 
-The `envvars` field must contain at least one environment variable name for
+The `values` field must contain at least one environment variable name for
 validation. Environment variable names should follow the C_IDENTIFIER standard.
 
 > [!IMPORTANT]  

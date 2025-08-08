@@ -1,12 +1,12 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use anyhow::{anyhow, Result};
 use guest::prelude::*;
 use k8s_openapi::api::core::v1::{self as apicore, Container, EphemeralContainer};
-use kubewarden_policy_sdk::wapc_guest as guest;
-extern crate kubewarden_policy_sdk as kubewarden;
 use kubewarden::{protocol_version_guest, request::ValidationRequest, validate_settings};
-use operators::operators::*;
+use operators::kubewarden_policy_sdk as kubewarden;
+use operators::kubewarden_policy_sdk::wapc_guest as guest;
+use operators::validate::validate_values;
 use settings::Settings;
 
 mod settings;
@@ -19,27 +19,7 @@ pub extern "C" fn wapc_init() {
 }
 
 fn validate_envvar(settings: &Settings, env_vars: &[String]) -> Result<()> {
-    let resource_env_var_names: HashSet<String> = env_vars.iter().cloned().collect();
-    match settings {
-        Settings::ContainsAllOf { envvars } => {
-            contains_all_of(envvars, &resource_env_var_names, "envvar")
-        }
-        Settings::DoesNotContainAllOf { envvars } => {
-            does_not_contain_all_of(envvars, &resource_env_var_names, "envvar")
-        }
-        Settings::ContainsAnyOf { envvars } => {
-            contains_any_of(envvars, &resource_env_var_names, "envvar")
-        }
-        Settings::DoesNotContainAnyOf { envvars } => {
-            does_not_contain_any_of(envvars, &resource_env_var_names, "envvar")
-        }
-        Settings::ContainsOtherThan { envvars } => {
-            contains_other_than(envvars, &resource_env_var_names, "envvar")
-        }
-        Settings::DoesNotContainOtherThan { envvars } => {
-            does_not_contain_other_than(envvars, &resource_env_var_names, "envvar")
-        }
-    }
+    validate_values(&settings.0, env_vars)
 }
 
 // Returns a map with container names as keys and their environment variable names as values
@@ -114,6 +94,11 @@ fn validate(payload: &[u8]) -> CallResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::collections::HashSet;
+
+    use operators::constants::CONTAINS_ANY_OF_ERROR_MSG;
+    use operators::settings::BaseSettings;
 
     use rstest::rstest;
 
@@ -229,9 +214,9 @@ mod tests {
 
     #[test]
     fn test_multiple_container_error_message() {
-        let settings = Settings::ContainsAnyOf {
-            envvars: HashSet::from(["a".to_owned(), "b".to_owned()]),
-        };
+        let settings = Settings(BaseSettings::ContainsAnyOf {
+            values: HashSet::from(["a".to_owned(), "b".to_owned()]),
+        });
         let container_envvar = Some(Vec::from([apicore::EnvVar {
             name: "c".to_owned(),
             ..Default::default()
@@ -283,10 +268,8 @@ mod tests {
         assert_eq!(errors.len(), 6, "Expected 6 errors, got {}", errors.len());
         for c in 1..6 {
             assert!(
-                errors.iter().any(|errmsg| errmsg.starts_with(&format!(
-                    "test-container{c}: {} ",
-                    contains_any_of_error_msg("envvar")
-                ))),
+                errors.iter().any(|errmsg| errmsg
+                    .starts_with(&format!("test-container{c}: {CONTAINS_ANY_OF_ERROR_MSG} "))),
                 "Validation error message does not contain expected text"
             );
         }

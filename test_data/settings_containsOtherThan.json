@@ -1,7 +1,4 @@
 {
-	"criteria": "containsOtherThan",
-	"envvars": [
-		"a",
-		"b"
-	]
+  "criteria": "containsOtherThan",
+  "values": ["a", "b"]
 }

@@ -2,126 +2,92 @@ use std::collections::HashSet;
 
 use anyhow::{Result, anyhow};
 
-pub fn contains_any_of_error_msg(resource_type: &str) -> String {
-    format!(
-        "Resource must have at least one of the required {resource_type}s specified by the validation rule. None of the expected {resource_type}s were found:"
-    )
-}
-pub fn does_not_contain_any_of_error_msg(resource_type: &str) -> String {
-    format!(
-        "Resource must not have any of the {resource_type}s specified in the validation rule. The following invalid {resource_type}s were found:",
-    )
-}
-pub fn contains_all_of_error_msg(resource_type: &str) -> String {
-    format!(
-        "Resource is missing required {resource_type}s as specified in the validation rules. The following {resource_type}s are missing:",
-    )
-}
-pub fn does_not_contain_all_of_error_msg(resource_type: &str) -> String {
-    format!(
-        "Resource has conflicting {resource_type}s set according to the validation rules. The following {resource_type}s should not be set together:",
-    )
-}
-pub fn contains_other_than_error_msg(resource_type: &str) -> String {
-    format!(
-        "Resource must not have any {resource_type}s other than those specified in the validation rule. The following {resource_type}s were found that should not be present:",
-    )
-}
-pub fn does_not_contain_other_than_error_msg(resource_type: &str) -> String {
-    format!(
-        "Resource must have only {resource_type}s from the validation rule. The following {resource_type}s were found that should not be present:",
-    )
-}
+use crate::constants::{
+    CONTAINS_ALL_OF_ERROR_MSG, CONTAINS_ANY_OF_ERROR_MSG, CONTAINS_OTHER_THAN_ERROR_MSG,
+    DOES_NOT_CONTAIN_ALL_OF_ERROR_MSG, DOES_NOT_CONTAIN_ANY_OF_ERROR_MSG,
+    DOES_NOT_CONTAIN_OTHER_THAN_ERROR_MSG,
+};
 
-pub fn contains_any_of(
+pub(crate) fn contains_any_of(
     contains_any_of: &HashSet<String>,
-    resource_names: &HashSet<String>,
-    resource_type: &str,
+    resource_env_var_names: &HashSet<String>,
 ) -> Result<()> {
-    if contains_any_of.is_disjoint(resource_names) {
-        let missing = contains_any_of.clone().into_iter().collect::<Vec<String>>();
-        return Err(anyhow!(
-            "{} {}",
-            contains_any_of_error_msg(resource_type),
-            missing.join(", ")
-        ));
+    if contains_any_of.is_disjoint(resource_env_var_names) {
+        let missing_envvar = contains_any_of
+            .clone()
+            .into_iter()
+            .collect::<Vec<String>>()
+            .join(", ");
+        return Err(anyhow!("{CONTAINS_ANY_OF_ERROR_MSG} {missing_envvar}"));
     }
     Ok(())
 }
 
 // implements a denylist
-pub fn does_not_contain_any_of(
+pub(crate) fn does_not_contain_any_of(
     does_not_contains_any_of: &HashSet<String>,
-    resource_names: &HashSet<String>,
-    resource_type: &str,
+    resource_env_var_names: &HashSet<String>,
 ) -> Result<()> {
-    let invalid = does_not_contains_any_of
+    let invalid_envvars = does_not_contains_any_of
         .clone()
-        .intersection(resource_names)
+        .intersection(resource_env_var_names)
         .cloned()
         .collect::<Vec<String>>();
-    if invalid.is_empty() {
+    if invalid_envvars.is_empty() {
         return Ok(());
     }
     Err(anyhow!(
-        "{} {}",
-        does_not_contain_any_of_error_msg(resource_type),
-        invalid.join(", ")
+        "{DOES_NOT_CONTAIN_ANY_OF_ERROR_MSG} {}",
+        invalid_envvars.join(", ")
     ))
 }
 
-pub fn contains_all_of(
+pub(crate) fn contains_all_of(
     contains_all_of: &HashSet<String>,
-    resource_names: &HashSet<String>,
-    resource_type: &str,
+    resource_env_var_names: &HashSet<String>,
 ) -> Result<()> {
-    let missing = contains_all_of
-        .difference(resource_names)
+    let missing_envvar = contains_all_of
+        .difference(resource_env_var_names)
         .cloned()
         .collect::<Vec<String>>();
-    if missing.is_empty() {
+    if missing_envvar.is_empty() {
         return Ok(());
     }
     Err(anyhow!(
-        "{} {}",
-        contains_all_of_error_msg(resource_type),
-        missing.join(", ")
+        "{CONTAINS_ALL_OF_ERROR_MSG} {}",
+        missing_envvar.join(", ")
     ))
 }
 
-pub fn does_not_contain_all_of(
-    does_not_contain_all_of: &HashSet<String>,
-    resource_names: &HashSet<String>,
-    resource_type: &str,
+pub(crate) fn does_not_contain_all_of(
+    does_not_contains_all_of: &HashSet<String>,
+    resource_env_var_names: &HashSet<String>,
 ) -> Result<()> {
-    if does_not_contain_all_of.is_subset(resource_names) {
-        let invalid = does_not_contain_all_of
+    if does_not_contains_all_of.is_subset(resource_env_var_names) {
+        let invalid_envvars = does_not_contains_all_of
             .iter()
             .cloned()
-            .collect::<Vec<String>>();
+            .collect::<Vec<String>>()
+            .join(", ");
         return Err(anyhow!(
-            "{} {}",
-            does_not_contain_all_of_error_msg(resource_type),
-            invalid.join(", ")
+            "{DOES_NOT_CONTAIN_ALL_OF_ERROR_MSG} {invalid_envvars}"
         ));
     }
     Ok(())
 }
 
-pub fn contains_other_than(
+pub(crate) fn contains_other_than(
     contains_other_than: &HashSet<String>,
-    resource_names: &HashSet<String>,
-    resource_type: &str,
+    resource_env_var_names: &HashSet<String>,
 ) -> Result<()> {
-    if resource_names.is_subset(contains_other_than) {
-        let invalid = resource_names
+    if resource_env_var_names.is_subset(contains_other_than) {
+        let invalid_envvars = resource_env_var_names
             .difference(contains_other_than)
             .cloned()
             .collect::<Vec<String>>();
         Err(anyhow!(
-            "{} {}",
-            contains_other_than_error_msg(resource_type),
-            invalid.join(", ")
+            "{CONTAINS_OTHER_THAN_ERROR_MSG} {}",
+            invalid_envvars.join(", ")
         ))
     } else {
         Ok(())
@@ -129,22 +95,20 @@ pub fn contains_other_than(
 }
 
 // implements an allowlist
-pub fn does_not_contain_other_than(
+pub(crate) fn does_not_contain_other_than(
     does_not_contain_other_than: &HashSet<String>,
-    resource_names: &HashSet<String>,
-    resource_type: &str,
+    resource_env_var_names: &HashSet<String>,
 ) -> Result<()> {
-    if resource_names.is_subset(does_not_contain_other_than) {
+    if resource_env_var_names.is_subset(does_not_contain_other_than) {
         Ok(())
     } else {
-        let invalid = resource_names
+        let invalid_envvars = resource_env_var_names
             .difference(does_not_contain_other_than)
             .cloned()
             .collect::<Vec<String>>();
         Err(anyhow!(
-            "{} {}",
-            does_not_contain_other_than_error_msg(resource_type),
-            invalid.join(", ")
+            "{DOES_NOT_CONTAIN_OTHER_THAN_ERROR_MSG} {}",
+            invalid_envvars.join(", ")
         ))
     }
 }
@@ -167,15 +131,13 @@ mod tests {
         let resource_env_var_names: HashSet<String> =
             envvar.into_iter().map(|v| v.to_string()).collect();
 
-        let result = contains_any_of(&default_envvar, &resource_env_var_names, "envvar");
+        let result = contains_any_of(&default_envvar, &resource_env_var_names);
         if is_ok {
             result.expect("Expected validation to pass");
         } else {
             let error = result.expect_err("Expected validation to fail");
             assert!(
-                error
-                    .to_string()
-                    .contains(&contains_any_of_error_msg("envvar")),
+                error.to_string().contains(CONTAINS_ANY_OF_ERROR_MSG),
                 "Validation error message does not contain expected text"
             );
         }
@@ -193,7 +155,7 @@ mod tests {
         let resource_env_var_names: HashSet<String> =
             envvar.into_iter().map(|v| v.to_string()).collect();
 
-        let result = does_not_contain_any_of(&default_envvar, &resource_env_var_names, "envvar");
+        let result = does_not_contain_any_of(&default_envvar, &resource_env_var_names);
         if is_ok {
             result.expect("Expected validation to pass");
         } else {
@@ -201,7 +163,7 @@ mod tests {
             assert!(
                 error
                     .to_string()
-                    .contains(&does_not_contain_any_of_error_msg("envvar")),
+                    .contains(DOES_NOT_CONTAIN_ANY_OF_ERROR_MSG),
                 "Validation error message does not contain expected text"
             );
         }
@@ -219,15 +181,13 @@ mod tests {
         let resource_env_var_names: HashSet<String> =
             envvar.into_iter().map(|v| v.to_string()).collect();
 
-        let result = contains_all_of(&default_envvar, &resource_env_var_names, "envvar");
+        let result = contains_all_of(&default_envvar, &resource_env_var_names);
         if is_ok {
             result.expect("Expected validation to pass");
         } else {
             let error = result.expect_err("Expected validation to fail");
             assert!(
-                error
-                    .to_string()
-                    .contains(&contains_all_of_error_msg("envvar")),
+                error.to_string().contains(CONTAINS_ALL_OF_ERROR_MSG),
                 "Validation error message does not contain expected text"
             );
         }
@@ -246,7 +206,7 @@ mod tests {
         let resource_env_var_names: HashSet<String> =
             envvar.into_iter().map(|v| v.to_string()).collect();
 
-        let result = does_not_contain_all_of(&default_envvar, &resource_env_var_names, "envvar");
+        let result = does_not_contain_all_of(&default_envvar, &resource_env_var_names);
         if is_ok {
             result.expect("Expected validation to pass");
         } else {
@@ -254,7 +214,7 @@ mod tests {
             assert!(
                 error
                     .to_string()
-                    .contains(&does_not_contain_all_of_error_msg("envvar")),
+                    .contains(DOES_NOT_CONTAIN_ALL_OF_ERROR_MSG),
                 "Validation error message does not contain expected text"
             );
         }
@@ -272,15 +232,13 @@ mod tests {
         let resource_env_var_names: HashSet<String> =
             envvar.into_iter().map(|v| v.to_string()).collect();
 
-        let result = contains_other_than(&default_envvar, &resource_env_var_names, "envvar");
+        let result = contains_other_than(&default_envvar, &resource_env_var_names);
         if is_ok {
             result.expect("Expected validation to pass");
         } else {
             let error = result.expect_err("Expected validation to fail");
             assert!(
-                error
-                    .to_string()
-                    .contains(&contains_other_than_error_msg("envvar")),
+                error.to_string().contains(CONTAINS_OTHER_THAN_ERROR_MSG),
                 "Validation error message does not contain expected text"
             );
         }
@@ -298,8 +256,7 @@ mod tests {
         let resource_env_var_names: HashSet<String> =
             envvar.into_iter().map(|v| v.to_string()).collect();
 
-        let result =
-            does_not_contain_other_than(&default_envvar, &resource_env_var_names, "envvar");
+        let result = does_not_contain_other_than(&default_envvar, &resource_env_var_names);
         if is_ok {
             result.expect("Expected validation to pass");
         } else {
@@ -307,7 +264,7 @@ mod tests {
             assert!(
                 error
                     .to_string()
-                    .contains(&does_not_contain_other_than_error_msg("envvar")),
+                    .contains(DOES_NOT_CONTAIN_OTHER_THAN_ERROR_MSG),
                 "Validation error message does not contain expected text"
             );
         }

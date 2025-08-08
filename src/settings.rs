@@ -1,28 +1,20 @@
 use std::collections::HashSet;
 
+use operators::kubewarden_policy_sdk as kubewarden;
+use operators::settings::BaseSettings;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-#[serde(tag = "criteria")]
-#[allow(clippy::enum_variant_names)]
-pub(crate) enum Settings {
-    ContainsAllOf { envvars: HashSet<String> },
-    DoesNotContainAllOf { envvars: HashSet<String> },
-    ContainsAnyOf { envvars: HashSet<String> },
-    DoesNotContainAnyOf { envvars: HashSet<String> },
-    ContainsOtherThan { envvars: HashSet<String> },
-    DoesNotContainOtherThan { envvars: HashSet<String> },
-}
+pub(crate) struct Settings(pub(crate) BaseSettings);
 
 // It's not possible to use the Default in the derive macro because we cannot
 // set a #[default] attribute to enum item that is no unit enums.
 impl Default for Settings {
     fn default() -> Self {
-        Settings::ContainsAnyOf {
-            envvars: HashSet::new(),
-        }
+        Settings(BaseSettings::ContainsAnyOf {
+            values: HashSet::new(),
+        })
     }
 }
 
@@ -32,17 +24,9 @@ const ENVIRONMENT_VARIABLE_NAME_REGEX: &str = r"^[a-zA-Z_][a-zA-Z_\d]*$";
 
 impl kubewarden::settings::Validatable for Settings {
     fn validate(&self) -> Result<(), String> {
-        let envvars = match self {
-            Settings::ContainsAllOf { envvars } => envvars,
-            Settings::DoesNotContainAllOf { envvars } => envvars,
-            Settings::ContainsAnyOf { envvars } => envvars,
-            Settings::DoesNotContainAnyOf { envvars } => envvars,
-            Settings::ContainsOtherThan { envvars } => envvars,
-            Settings::DoesNotContainOtherThan { envvars } => envvars,
-        };
-        if envvars.is_empty() {
-            return Err("Empty environment variable list is not allowed".to_string());
-        }
+        self.0.validate()?;
+
+        let envvars = self.0.values();
 
         // Validate that the environment variable names are valid.
         let environment_variable_name_regex = Regex::new(ENVIRONMENT_VARIABLE_NAME_REGEX).unwrap();
@@ -69,7 +53,7 @@ impl kubewarden::settings::Validatable for Settings {
 mod tests {
     use super::*;
 
-    use kubewarden_policy_sdk::settings::Validatable;
+    use operators::kubewarden_policy_sdk::settings::Validatable;
     use rstest::rstest;
 
     #[rstest]
@@ -83,12 +67,12 @@ mod tests {
     #[case::uppercase_beginning_with_number(vec!["3VAR"], false)]
     #[case::lowercase_beginning_with_number(vec!["4var"], false)]
     fn test_validation(#[case] variables: Vec<&str>, #[case] is_ok: bool) {
-        let settings = Settings::ContainsAllOf {
-            envvars: variables
+        let settings = Settings(BaseSettings::ContainsAllOf {
+            values: variables
                 .iter()
                 .map(|v| v.to_string())
                 .collect::<HashSet<String>>(),
-        };
+        });
         assert_eq!(settings.validate().is_ok(), is_ok);
     }
 }

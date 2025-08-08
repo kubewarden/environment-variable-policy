@@ -4,7 +4,6 @@ policy.wasm: $(SOURCE_FILES) Cargo.*
 	cargo build --target=wasm32-wasip1 --release
 	cp target/wasm32-wasip1/release/*.wasm policy.wasm
 
-
 annotated-policy.wasm: policy.wasm metadata.yml
 	kwctl annotate -m metadata.yml -u README.md -o annotated-policy.wasm policy.wasm
 
@@ -14,8 +13,7 @@ fmt:
 
 .PHONY: lint
 lint:
-	cargo clippy -- -D warnings
-	cargo clippy --package operators -- -D warnings
+	cargo clippy --workspace -- -D warnings
 
 .PHONY: e2e-tests
 e2e-tests: annotated-policy.wasm
@@ -23,8 +21,7 @@ e2e-tests: annotated-policy.wasm
 
 .PHONY: test
 test: fmt lint
-	cargo test
-	cargo test --package operators
+	cargo test --workspace
 
 .PHONY: clean
 clean:

@@ -72,6 +72,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "criteria_policy_base"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "const_format",
+ "criteria_policy_base",
+ "k8s-openapi",
+ "kubewarden-policy-sdk",
+ "rstest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+]
+
+[[package]]
 name = "darling"
 version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -150,11 +165,11 @@ dependencies = [
 
 [[package]]
 name = "environment-variable-policy"
-version = "2.1.0"
+version = "3.0.0"
 dependencies = [
  "anyhow",
+ "criteria_policy_base",
  "k8s-openapi",
- "kubewarden-policy-sdk",
  "regex",
  "rstest",
  "serde",

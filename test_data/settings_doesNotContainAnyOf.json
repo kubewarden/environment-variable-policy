@@ -1,7 +1,4 @@
 {
-	"criteria": "doesNotContainAnyOf",
-	"envvars": [
-		"a",
-		"b"
-	]
+  "criteria": "doesNotContainAnyOf",
+  "values": ["a", "b"]
 }

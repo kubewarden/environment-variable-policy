@@ -1,15 +1,17 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use anyhow::{anyhow, Result};
+use criteria_policy_base::{
+    kubewarden_policy_sdk::{
+        accept_request, protocol_version_guest, reject_request, request::ValidationRequest,
+        validate_settings, wapc_guest as guest,
+    },
+    validate::validate_values,
+};
 use guest::prelude::*;
 use k8s_openapi::api::core::v1::{self as apicore, Container, EphemeralContainer};
-use kubewarden_policy_sdk::wapc_guest as guest;
-extern crate kubewarden_policy_sdk as kubewarden;
-use kubewarden::{protocol_version_guest, request::ValidationRequest, validate_settings};
-use operators::*;
 use settings::Settings;
 
-mod operators;
 mod settings;
 
 #[no_mangle]
@@ -20,23 +22,7 @@ pub extern "C" fn wapc_init() {
 }
 
 fn validate_envvar(settings: &Settings, env_vars: &[String]) -> Result<()> {
-    let resource_env_var_names: HashSet<String> = env_vars.iter().cloned().collect();
-    match settings {
-        Settings::ContainsAllOf { envvars } => contains_all_of(envvars, &resource_env_var_names),
-        Settings::DoesNotContainAllOf { envvars } => {
-            does_not_contain_all_of(envvars, &resource_env_var_names)
-        }
-        Settings::ContainsAnyOf { envvars } => contains_any_of(envvars, &resource_env_var_names),
-        Settings::DoesNotContainAnyOf { envvars } => {
-            does_not_contain_any_of(envvars, &resource_env_var_names)
-        }
-        Settings::ContainsOtherThan { envvars } => {
-            contains_other_than(envvars, &resource_env_var_names)
-        }
-        Settings::DoesNotContainOtherThan { envvars } => {
-            does_not_contain_other_than(envvars, &resource_env_var_names)
-        }
-    }
+    validate_values(&settings.0, env_vars)
 }
 
 // Returns a map with container names as keys and their environment variable names as values
@@ -103,17 +89,18 @@ fn validate(payload: &[u8]) -> CallResult {
     if let Err(errors) =
         validate_environment_variables(&pod_spec.unwrap_or_default(), &validation_request.settings)
     {
-        return kubewarden::reject_request(Some(errors.join(", ")), None, None, None);
+        return reject_request(Some(errors.join(", ")), None, None, None);
     }
-    kubewarden::accept_request()
+    accept_request()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use crate::CONTAINS_ANY_OF_ERROR_MSG;
+    use std::collections::HashSet;
 
+    use criteria_policy_base::{constants::CONTAINS_ANY_OF_ERROR_MSG, settings::BaseSettings};
     use rstest::rstest;
 
     #[rstest]
@@ -228,9 +215,9 @@ mod tests {
 
     #[test]
     fn test_multiple_container_error_message() {
-        let settings = Settings::ContainsAnyOf {
-            envvars: HashSet::from(["a".to_owned(), "b".to_owned()]),
-        };
+        let settings = Settings(BaseSettings::ContainsAnyOf {
+            values: HashSet::from(["a".to_owned(), "b".to_owned()]),
+        });
         let container_envvar = Some(Vec::from([apicore::EnvVar {
             name: "c".to_owned(),
             ..Default::default()

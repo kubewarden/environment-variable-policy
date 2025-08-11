@@ -1,7 +1,4 @@
 {
-	"criteria": "containsAllOf",
-	"envvars": [
-		"a",
-		"b"
-	]
+  "criteria": "containsAllOf",
+  "values": ["a", "b"]
 }

@@ -1,19 +1,12 @@
 use std::collections::HashSet;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
-pub(crate) const CONTAINS_ANY_OF_ERROR_MSG: &str =
-    "Resource must have at least one of the required environment variables specified by the validation rule. None of the expected environment variables were found:";
-pub(crate) const DOES_NOT_CONTAIN_ANY_OF_ERROR_MSG: &str =
-    "Resource must not have any of the environment variables specified in the validation rule. The following invalid environment variables were found:";
-pub(crate) const CONTAINS_ALL_OF_ERROR_MSG: &str =
-    "Resource is missing required environment variables as specified in the validation rules. The following environment variables are missing:";
-pub(crate) const DOES_NOT_CONTAIN_ALL_OF_ERROR_MSG: &str =
-    "Resource has conflicting environment variables set according to the validation rules. The following environment variables should not be set together:";
-pub(crate) const CONTAINS_OTHER_THAN_ERROR_MSG: &str =
-    "Resource must not have any environment variables other than those specified in the validation rule. The following environment variables were found that should not be present:";
-pub(crate) const DOES_NOT_CONTAIN_OTHER_THAN_ERROR_MSG: &str =
-    "Resource must have only environment variables from the validation rule. The following environment variables were found that should not be present:";
+use crate::constants::{
+    CONTAINS_ALL_OF_ERROR_MSG, CONTAINS_ANY_OF_ERROR_MSG, CONTAINS_OTHER_THAN_ERROR_MSG,
+    DOES_NOT_CONTAIN_ALL_OF_ERROR_MSG, DOES_NOT_CONTAIN_ANY_OF_ERROR_MSG,
+    DOES_NOT_CONTAIN_OTHER_THAN_ERROR_MSG,
+};
 
 pub(crate) fn contains_any_of(
     contains_any_of: &HashSet<String>,

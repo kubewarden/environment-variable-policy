@@ -19,93 +19,93 @@ These are some tables to help you understand the logic of the operators:
 
 ### `containsAnyOf`
 
-Given these `environmentVariables` settings: `[a, b]`
+Given these `values` settings: `[a, b]`
 
-| Resource environment variables | Evaluation result |
-| ------------------------------ | ----------------- |
-| a                              | Accepted          |
-| b                              | Accepted          |
-| a,b                            | Accepted          |
-| a,b,c                          | Accepted          |
-| c                              | Rejected          |
-| a, c                           | Accepted          |
-| b, c                           | Accepted          |
-| empty                          | Rejected          |
+| Resource values entries | Evaluation result |
+| ----------------------- | ----------------- |
+| a                       | Accepted          |
+| b                       | Accepted          |
+| a,b                     | Accepted          |
+| a,b,c                   | Accepted          |
+| c                       | Rejected          |
+| a, c                    | Accepted          |
+| b, c                    | Accepted          |
+| empty                   | Rejected          |
 
 ### `doesNotContainAnyOf` (denylist)
 
-Given these `environmentVariables` settings: `[a, b]`
+Given these `values` settings: `[a, b]`
 
-| Resource environment variables | Evaluation result |
-| ------------------------------ | ----------------- |
-| a                              | Rejected          |
-| b                              | Rejected          |
-| a,b                            | Rejected          |
-| a,b,c                          | Rejected          |
-| c                              | Accepted          |
-| a, c                           | Rejected          |
-| b, c                           | Rejected          |
-| empty                          | Accepted          |
+| Resource values entries | Evaluation result |
+| ----------------------- | ----------------- |
+| a                       | Rejected          |
+| b                       | Rejected          |
+| a,b                     | Rejected          |
+| a,b,c                   | Rejected          |
+| c                       | Accepted          |
+| a, c                    | Rejected          |
+| b, c                    | Rejected          |
+| empty                   | Accepted          |
 
 ### `containsAllOf`
 
-Given these `environmentVariables` settings: `[a, b]`
+Given these `values` settings: `[a, b]`
 
-| Resource environment variables | Evaluation result |
-| ------------------------------ | ----------------- |
-| a                              | Rejected          |
-| b                              | Rejected          |
-| a,b                            | Accepted          |
-| a,b,c                          | Accepted          |
-| c                              | Rejected          |
-| a, c                           | Rejected          |
-| b, c                           | Rejected          |
-| empty                          | Rejected          |
+| Resource values entries | Evaluation result |
+| ----------------------- | ----------------- |
+| a                       | Rejected          |
+| b                       | Rejected          |
+| a,b                     | Accepted          |
+| a,b,c                   | Accepted          |
+| c                       | Rejected          |
+| a, c                    | Rejected          |
+| b, c                    | Rejected          |
+| empty                   | Rejected          |
 
 ### `doesNotContainAllOf`
 
-Given these `environmentVariables` settings: `[a, b]`
+Given these `values` settings: `[a, b]`
 
-| Resource environment variables | Evaluation result |
-| ------------------------------ | ----------------- |
-| a                              | Accepted          |
-| b                              | Accepted          |
-| a,b                            | Rejected          |
-| a,b,c                          | Rejected          |
-| c                              | Accepted          |
-| a, c                           | Accepted          |
-| b, c                           | Accepted          |
-| empty                          | Accepted          |
+| Resource values entries | Evaluation result |
+| ----------------------- | ----------------- |
+| a                       | Accepted          |
+| b                       | Accepted          |
+| a,b                     | Rejected          |
+| a,b,c                   | Rejected          |
+| c                       | Accepted          |
+| a, c                    | Accepted          |
+| b, c                    | Accepted          |
+| empty                   | Accepted          |
 
 ### `containsOtherThan`
 
-Given these `environmentVariables` settings: `[a, b]`
+Given these `values` settings: `[a, b]`
 
-| Resource environment variables | Evaluation result |
-| ------------------------------ | ----------------- |
-| a                              | rejected          |
-| b                              | rejected          |
-| a,b                            | rejected          |
-| a,b,c                          | accepted          |
-| c                              | accepted          |
-| a, c                           | accepted          |
-| b, c                           | accepted          |
-| empty                          | rejected          |
+| Resource values entries | Evaluation result |
+| ----------------------- | ----------------- |
+| a                       | rejected          |
+| b                       | rejected          |
+| a,b                     | rejected          |
+| a,b,c                   | accepted          |
+| c                       | accepted          |
+| a, c                    | accepted          |
+| b, c                    | accepted          |
+| empty                   | rejected          |
 
 ### `doesNotContainOtherThan` (allowlist)
 
-Given these `environmentVariables` settings: `[a, b]`
+Given these `values` settings: `[a, b]`
 
-| Resource environment variables | Evaluation result |
-| ------------------------------ | ----------------- |
-| a                              | accepted          |
-| b                              | accepted          |
-| a,b                            | accepted          |
-| a,b,c                          | rejected          |
-| c                              | rejected          |
-| a, c                           | rejected          |
-| b, c                           | rejected          |
-| empty                          | accepted          |
+| Resource values entries | Evaluation result |
+| ----------------------- | ----------------- |
+| a                       | accepted          |
+| b                       | accepted          |
+| a,b                     | accepted          |
+| a,b,c                   | rejected          |
+| c                       | rejected          |
+| a, c                    | rejected          |
+| b, c                    | rejected          |
+| empty                   | accepted          |
 
 ## How to use the library
 

@@ -55,13 +55,13 @@ settings:
 The `criteria` configuration can have the following values:
 
 - `containsAnyOf`: enforces that the resource has at least one of the
-  `environmentVariables`.
+  environment variables.
 - `doesNotContainAnyOf`: enforces that the resource does not have any environment
-  variable defined in `environmentVariables`. It's the opposite of `containsAnyOf`.
-- `containsAllOf`: enforces that all of the `environmentVariables` are defined in
-  the resource.
-- `doesNotContainAllOf`: enforces that the `environmentVariables` are not all set
-  together in the resource. It's the opposite of `containsAllOf`.
+  variable defined in `values`. It's the opposite of `containsAnyOf`.
+- `containsAllOf`: enforces that all of the environment variables in `values`
+  are defined in the resource.
+- `doesNotContainAllOf`: enforces that the environment variables in `values`
+  are not all set together in the resource. It's the opposite of `containsAllOf`.
 
 The `values` field must contain at least one environment variable name for
 validation. Environment variable names should follow the C_IDENTIFIER standard.

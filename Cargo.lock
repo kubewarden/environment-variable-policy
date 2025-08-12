@@ -73,7 +73,7 @@ dependencies = [
 
 [[package]]
 name = "criteria_policy_base"
-version = "0.1.0"
+version = "3.0.1"
 dependencies = [
  "anyhow",
  "const_format",
@@ -165,7 +165,7 @@ dependencies = [
 
 [[package]]
 name = "environment-variable-policy"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "anyhow",
  "criteria_policy_base",

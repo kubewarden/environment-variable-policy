@@ -25,7 +25,7 @@ trade-offs:
 
 ## Settings
 
-> [!WARNING]  
+> [!WARNING]
 > If you are upgrading from version v1.x.x, please note the breaking changes
 > introduced in v2.x.x:
 >
@@ -62,11 +62,13 @@ The `criteria` configuration can have the following values:
   are defined in the resource.
 - `doesNotContainAllOf`: enforces that the environment variables in `values`
   are not all set together in the resource. It's the opposite of `containsAllOf`.
+- `ContainsOtherThan`
+- `DoesNotContainOtherThan`
 
 The `values` field must contain at least one environment variable name for
 validation. Environment variable names should follow the C_IDENTIFIER standard.
 
-> [!IMPORTANT]  
+> [!IMPORTANT]
 > An empty list of environment variable names is not allowed.
 
 If you require more complex environment variable validation, consider the use

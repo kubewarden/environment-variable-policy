@@ -17,6 +17,6 @@ questions:
     label: "Environment variables"
     description: "Environment variables names to be validated with the resources definition"
     group: Settings
-    variable: envvars
+    variable: values
     required: true
     type: array[

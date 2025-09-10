@@ -6,7 +6,7 @@ version = "0.1.0"
 [dependencies]
 anyhow                = "1"
 const_format          = "0.2"
-kubewarden-policy-sdk = "0.14"
+kubewarden-policy-sdk = "0.14.6"
 serde                 = { version = "1.0", features = ["derive"] }
 serde_json            = "1.0"
 

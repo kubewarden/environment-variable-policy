@@ -5,7 +5,7 @@ use crate::kubewarden_policy_sdk as kubewarden;
 use serde::{Deserialize, Serialize};
 
 /// Represents the base settings for the policy, which can be used to
-/// define criteria for matching environment variables, labels, or annotations.
+/// define criteria for matching environment variables, labels, annotations or CVE names.
 ///
 /// The real policy has just to embed this enum in its settings struct.
 ///
